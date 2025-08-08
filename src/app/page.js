@@ -1,348 +1,361 @@
-"use client";
+'use client';
 
-import { cn } from "@/lib/utils";
-import React from "react";
-import { BentoGrid, BentoGridItem } from "@/components/ui/bento-grid";
+import { useState } from 'react';
 import {
-  IconBoxAlignRightFilled,
-  IconClipboardCopy,
-  IconFileBroken,
-  IconSignature,
-  IconTableColumn,
-} from "@tabler/icons-react";
-import { motion } from "framer-motion";
-import Image from "next/image";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  IconTrendingUp,
+  IconClock,
+  IconVolume,
+  IconUsers,
+  IconChartBar,
+  IconTarget,
+  IconFilter,
+  IconExternalLink,
+} from '@tabler/icons-react';
 
 export default function Home() {
+  const [trendingFilter, setTrendingFilter] = useState('volume');
+  const [newFilter, setNewFilter] = useState('duration');
+
+  // Mock data for demonstration
+  const trendingMarkets = [
+    {
+      title: 'Will Bitcoin reach $100k by 2024?',
+      created: '2 days ago',
+      volume: '$2.4M',
+      probability: '68%',
+      change: '+5.2%',
+    },
+    {
+      title: 'US Election 2024 Winner',
+      created: '1 week ago',
+      volume: '$1.8M',
+      probability: '45%',
+      change: '-2.1%',
+    },
+    {
+      title: 'Tesla Stock Price Above $300',
+      created: '3 days ago',
+      volume: '$950K',
+      probability: '72%',
+      change: '+8.7%',
+    },
+  ];
+
+  const newMarkets = [
+    {
+      title: 'AI will pass Turing Test in 2024',
+      created: '2 hours ago',
+      volume: '$45K',
+      probability: '34%',
+    },
+    {
+      title: 'SpaceX Mars Mission Success',
+      created: '5 hours ago',
+      volume: '$78K',
+      probability: '28%',
+    },
+    {
+      title: 'Ethereum 2.0 Full Launch',
+      created: '1 day ago',
+      volume: '$156K',
+      probability: '89%',
+    },
+  ];
+
   return (
-    (<BentoGrid className="max-w-4xl mx-auto md:auto-rows-[20rem]">
-      {items.map((item, i) => (
-        <BentoGridItem
-          key={i}
-          title={item.title}
-          description={item.description}
-          header={item.header}
-          className={cn("[&>p:text-lg]", item.className)}
-          icon={item.icon} />
-      ))}
-    </BentoGrid>)
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 pt-32">
+      {/* Welcome Section */}
+      <div className="container mx-auto px-4 py-8">
+        <Card className="mb-8 bg-gradient-to-r from-blue-600 to-purple-600 text-white border-0">
+          <CardContent className="p-8">
+            <div className="text-center space-y-4">
+              <h1 className="text-4xl font-bold">Welcome to NoorooFi</h1>
+              <p className="text-xl opacity-90">
+                Prediction Market Aggregator, Analytics Dashboard & Scanner with
+                AI
+              </p>
+              <p className="text-lg opacity-80">
+                Powered by <span className="font-semibold">The Graph</span>{' '}
+                protocol for decentralized data indexing
+              </p>
+              <div className="flex justify-center space-x-4 mt-6">
+                <Badge variant="secondary" className="text-blue-600">
+                  Real-time Analytics
+                </Badge>
+                <Badge variant="secondary" className="text-blue-600">
+                  AI-Powered Insights
+                </Badge>
+                <Badge variant="secondary" className="text-blue-600">
+                  Multi-Platform Aggregation
+                </Badge>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 4-Box Layout: Left Bigger, Right Wider */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          {/* Top Left - Trending Markets (Bigger) */}
+          <div className="lg:col-span-3">
+            <Card className="h-[350px]">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <IconTrendingUp className="h-5 w-5 text-green-600" />
+                    <CardTitle>Trending Markets</CardTitle>
+                  </div>
+                  <Select
+                    value={trendingFilter}
+                    onValueChange={setTrendingFilter}
+                  >
+                    <SelectTrigger className="w-40">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="volume">Filter by Volume</SelectItem>
+                      <SelectItem value="activity">
+                        Filter by Activity
+                      </SelectItem>
+                      <SelectItem value="change">Filter by Change</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardHeader>
+              <CardContent className="h-[calc(100%-80px)] overflow-y-auto">
+                <div className="space-y-4">
+                  {trendingMarkets.map((market, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                    >
+                      <div className="flex-1">
+                        <h3 className="font-medium text-gray-900 dark:text-white mb-1">
+                          {market.title}
+                        </h3>
+                        <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
+                          <span className="flex items-center">
+                            <IconClock className="h-4 w-4 mr-1" />
+                            {market.created}
+                          </span>
+                          <span className="flex items-center">
+                            <IconVolume className="h-4 w-4 mr-1" />
+                            {market.volume}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right space-y-1">
+                        <div className="text-lg font-semibold">
+                          {market.probability}
+                        </div>
+                        <div
+                          className={`text-sm ${
+                            market.change.startsWith('+')
+                              ? 'text-green-600'
+                              : 'text-red-600'
+                          }`}
+                        >
+                          {market.change}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Top Right - New Markets (Wider) */}
+          <div className="lg:col-span-2">
+            <Card className="h-[350px]">
+              <CardHeader>
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <IconClock className="h-5 w-5 text-blue-600" />
+                    <CardTitle className="text-lg">New Markets</CardTitle>
+                  </div>
+                  <Select value={newFilter} onValueChange={setNewFilter}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="duration">
+                        Filter by Duration
+                      </SelectItem>
+                      <SelectItem value="volume">Filter by Volume</SelectItem>
+                      <SelectItem value="popularity">
+                        Filter by Popularity
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardHeader>
+              <CardContent className="h-[calc(100%-120px)] overflow-y-auto">
+                <div className="space-y-3">
+                  {newMarkets.map((market, index) => (
+                    <div
+                      key={index}
+                      className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                    >
+                      <h4 className="font-medium text-sm mb-2 leading-tight">
+                        {market.title}
+                      </h4>
+                      <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-2">
+                        <span>{market.created}</span>
+                        <span>{market.volume}</span>
+                      </div>
+                      <div className="mt-2">
+                        <Badge variant="outline" className="text-xs">
+                          {market.probability}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Bottom Left - Market Analytics (Bigger) */}
+          <div className="lg:col-span-3">
+            <Card className="h-[400px]">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <IconChartBar className="h-5 w-5" />
+                  <span>Market Analytics - Powered by The Graph</span>
+                </CardTitle>
+                <CardDescription>
+                  Real-time market data visualization and trends
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="h-[calc(100%-100px)]">
+                <div className="h-full bg-gradient-to-br from-blue-100 to-purple-100 dark:from-gray-700 dark:to-gray-600 rounded-lg flex flex-col items-center justify-center space-y-4">
+                  <div className="text-center space-y-4">
+                    <IconChartBar className="h-16 w-16 mx-auto text-blue-600" />
+                    <div>
+                      <p className="text-lg font-semibold text-gray-700 dark:text-gray-200">
+                        Interactive Chart Component
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md">
+                        Market volume, price movements, and prediction accuracy
+                        over time
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4 mt-6">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-blue-600">
+                          $45.2M
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Total Volume
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-green-600">
+                          87.3%
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Accuracy Rate
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-purple-600">
+                          24h
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Avg Resolution
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Bottom Right - Statistics Cards (Wider) */}
+          <div className="lg:col-span-2">
+            <div className="h-[400px] flex flex-col justify-end">
+              <div className="space-y-3">
+                {/* Total Traders */}
+                <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white border-0 h-[125px]">
+                  <CardContent className="p-4 h-full flex items-center">
+                    <div className="flex items-center justify-between w-full">
+                      <div>
+                        <p className="text-purple-100 text-sm font-medium">
+                          Total Traders
+                        </p>
+                        <p className="text-2xl font-bold">1,250,000</p>
+                        <p className="text-purple-200 text-xs mt-1">
+                          +12.5% this month
+                        </p>
+                      </div>
+                      <div className="bg-white/20 p-3 rounded-full">
+                        <IconUsers className="h-7 w-7" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Total Markets */}
+                <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white border-0 h-[125px]">
+                  <CardContent className="p-4 h-full flex items-center">
+                    <div className="flex items-center justify-between w-full">
+                      <div>
+                        <p className="text-green-100 text-sm font-medium">
+                          Active Markets
+                        </p>
+                        <p className="text-2xl font-bold">200,000</p>
+                        <p className="text-green-200 text-xs mt-1">
+                          +8.3% this week
+                        </p>
+                      </div>
+                      <div className="bg-white/20 p-3 rounded-full">
+                        <IconTarget className="h-7 w-7" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Live Positions */}
+                <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white border-0 h-[125px]">
+                  <CardContent className="p-4 h-full flex items-center">
+                    <div className="flex items-center justify-between w-full">
+                      <div>
+                        <p className="text-orange-100 text-sm font-medium">
+                          Live Positions
+                        </p>
+                        <p className="text-2xl font-bold">2,000,000</p>
+                        <p className="text-orange-200 text-xs mt-1">
+                          +15.7% today
+                        </p>
+                      </div>
+                      <div className="bg-white/20 p-3 rounded-full">
+                        <IconChartBar className="h-7 w-7" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
-
-const SkeletonOne = () => {
-  const variants = {
-    initial: {
-      x: 0,
-    },
-    animate: {
-      x: 10,
-      rotate: 5,
-      transition: {
-        duration: 0.2,
-      },
-    },
-  };
-  const variantsSecond = {
-    initial: {
-      x: 0,
-    },
-    animate: {
-      x: -10,
-      rotate: -5,
-      transition: {
-        duration: 0.2,
-      },
-    },
-  };
-
-  return (
-    (<motion.div
-      initial="initial"
-      whileHover="animate"
-      className="flex flex-1 w-full h-full min-h-[6rem] dark:bg-dot-white/[0.2] bg-dot-black/[0.2] flex-col space-y-2">
-      <motion.div
-        variants={variants}
-        className="flex flex-row rounded-full border border-neutral-100 dark:border-white/[0.2] p-2  items-center space-x-2 bg-white dark:bg-black">
-        <div
-          className="h-6 w-6 rounded-full bg-gradient-to-r from-pink-500 to-violet-500 flex-shrink-0" />
-        <div className="w-full bg-gray-100 h-4 rounded-full dark:bg-neutral-900" />
-      </motion.div>
-      <motion.div
-        variants={variantsSecond}
-        className="flex flex-row rounded-full border border-neutral-100 dark:border-white/[0.2] p-2 items-center space-x-2 w-3/4 ml-auto bg-white dark:bg-black">
-        <div className="w-full bg-gray-100 h-4 rounded-full dark:bg-neutral-900" />
-        <div
-          className="h-6 w-6 rounded-full bg-gradient-to-r from-pink-500 to-violet-500 flex-shrink-0" />
-      </motion.div>
-      <motion.div
-        variants={variants}
-        className="flex flex-row rounded-full border border-neutral-100 dark:border-white/[0.2] p-2 items-center space-x-2 bg-white dark:bg-black">
-        <div
-          className="h-6 w-6 rounded-full bg-gradient-to-r from-pink-500 to-violet-500 flex-shrink-0" />
-        <div className="w-full bg-gray-100 h-4 rounded-full dark:bg-neutral-900" />
-      </motion.div>
-    </motion.div>)
-  );
-};
-const SkeletonTwo = () => {
-  const variants = {
-    initial: {
-      width: 0,
-    },
-    animate: {
-      width: "100%",
-      transition: {
-        duration: 0.2,
-      },
-    },
-    hover: {
-      width: ["0%", "100%"],
-      transition: {
-        duration: 2,
-      },
-    },
-  };
-  const arr = new Array(6).fill(0);
-  return (
-    (<motion.div
-      initial="initial"
-      animate="animate"
-      whileHover="hover"
-      className="flex flex-1 w-full h-full min-h-[6rem] dark:bg-dot-white/[0.2] bg-dot-black/[0.2] flex-col space-y-2">
-      {arr.map((_, i) => (
-        <motion.div
-          key={"skelenton-two" + i}
-          variants={variants}
-          style={{
-            maxWidth: Math.random() * (100 - 40) + 40 + "%",
-          }}
-          className="flex flex-row rounded-full border border-neutral-100 dark:border-white/[0.2] p-2  items-center space-x-2 bg-neutral-100 dark:bg-black w-full h-4"></motion.div>
-      ))}
-    </motion.div>)
-  );
-};
-const SkeletonThree = () => {
-  const variants = {
-    initial: {
-      backgroundPosition: "0 50%",
-    },
-    animate: {
-      backgroundPosition: ["0, 50%", "100% 50%", "0 50%"],
-    },
-  };
-  return (
-    (<motion.div
-      initial="initial"
-      animate="animate"
-      variants={variants}
-      transition={{
-        duration: 5,
-        repeat: Infinity,
-        repeatType: "reverse",
-      }}
-      className="flex flex-1 w-full h-full min-h-[6rem] dark:bg-dot-white/[0.2] rounded-lg bg-dot-black/[0.2] flex-col space-y-2"
-      style={{
-        background:
-          "linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab)",
-        backgroundSize: "400% 400%",
-      }}>
-      <motion.div className="h-full w-full rounded-lg"></motion.div>
-    </motion.div>)
-  );
-};
-const SkeletonFour = () => {
-  const first = {
-    initial: {
-      x: 20,
-      rotate: -5,
-    },
-    hover: {
-      x: 0,
-      rotate: 0,
-    },
-  };
-  const second = {
-    initial: {
-      x: -20,
-      rotate: 5,
-    },
-    hover: {
-      x: 0,
-      rotate: 0,
-    },
-  };
-  return (
-    (<motion.div
-      initial="initial"
-      animate="animate"
-      whileHover="hover"
-      className="flex flex-1 w-full h-full min-h-[6rem] dark:bg-dot-white/[0.2] bg-dot-black/[0.2] flex-row space-x-2">
-      <motion.div
-        variants={first}
-        className="h-full w-1/3 rounded-2xl bg-white p-4 dark:bg-black dark:border-white/[0.1] border border-neutral-200 flex flex-col items-center justify-center">
-        <Image
-          src="https://pbs.twimg.com/profile_images/1417752099488636931/cs2R59eW_400x400.jpg"
-          alt="avatar"
-          height="100"
-          width="100"
-          className="rounded-full h-10 w-10" />
-        <p
-          className="sm:text-sm text-xs text-center font-semibold text-neutral-500 mt-4">
-          Just code in Vanilla Javascript
-        </p>
-        <p
-          className="border border-red-500 bg-red-100 dark:bg-red-900/20 text-red-600 text-xs rounded-full px-2 py-0.5 mt-4">
-          Delusional
-        </p>
-      </motion.div>
-      <motion.div
-        className="h-full relative z-20 w-1/3 rounded-2xl bg-white p-4 dark:bg-black dark:border-white/[0.1] border border-neutral-200 flex flex-col items-center justify-center">
-        <Image
-          src="https://pbs.twimg.com/profile_images/1417752099488636931/cs2R59eW_400x400.jpg"
-          alt="avatar"
-          height="100"
-          width="100"
-          className="rounded-full h-10 w-10" />
-        <p
-          className="sm:text-sm text-xs text-center font-semibold text-neutral-500 mt-4">
-          Tailwind CSS is cool, you know
-        </p>
-        <p
-          className="border border-green-500 bg-green-100 dark:bg-green-900/20 text-green-600 text-xs rounded-full px-2 py-0.5 mt-4">
-          Sensible
-        </p>
-      </motion.div>
-      <motion.div
-        variants={second}
-        className="h-full w-1/3 rounded-2xl bg-white p-4 dark:bg-black dark:border-white/[0.1] border border-neutral-200 flex flex-col items-center justify-center">
-        <Image
-          src="https://pbs.twimg.com/profile_images/1417752099488636931/cs2R59eW_400x400.jpg"
-          alt="avatar"
-          height="100"
-          width="100"
-          className="rounded-full h-10 w-10" />
-        <p
-          className="sm:text-sm text-xs text-center font-semibold text-neutral-500 mt-4">
-          I love angular, RSC, and Redux.
-        </p>
-        <p
-          className="border border-orange-500 bg-orange-100 dark:bg-orange-900/20 text-orange-600 text-xs rounded-full px-2 py-0.5 mt-4">
-          Helpless
-        </p>
-      </motion.div>
-    </motion.div>)
-  );
-};
-const SkeletonFive = () => {
-  const variants = {
-    initial: {
-      x: 0,
-    },
-    animate: {
-      x: 10,
-      rotate: 5,
-      transition: {
-        duration: 0.2,
-      },
-    },
-  };
-  const variantsSecond = {
-    initial: {
-      x: 0,
-    },
-    animate: {
-      x: -10,
-      rotate: -5,
-      transition: {
-        duration: 0.2,
-      },
-    },
-  };
-
-  return (
-    (<motion.div
-      initial="initial"
-      whileHover="animate"
-      className="flex flex-1 w-full h-full min-h-[6rem] dark:bg-dot-white/[0.2] bg-dot-black/[0.2] flex-col space-y-2">
-      <motion.div
-        variants={variants}
-        className="flex flex-row rounded-2xl border border-neutral-100 dark:border-white/[0.2] p-2  items-start space-x-2 bg-white dark:bg-black">
-        <Image
-          src="https://pbs.twimg.com/profile_images/1417752099488636931/cs2R59eW_400x400.jpg"
-          alt="avatar"
-          height="100"
-          width="100"
-          className="rounded-full h-10 w-10" />
-        <p className="text-xs text-neutral-500">
-          There are a lot of cool framerworks out there like React, Angular,
-          Vue, Svelte that can make your life ....
-        </p>
-      </motion.div>
-      <motion.div
-        variants={variantsSecond}
-        className="flex flex-row rounded-full border border-neutral-100 dark:border-white/[0.2] p-2 items-center justify-end space-x-2 w-3/4 ml-auto bg-white dark:bg-black">
-        <p className="text-xs text-neutral-500">Use PHP.</p>
-        <div
-          className="h-6 w-6 rounded-full bg-gradient-to-r from-pink-500 to-violet-500 flex-shrink-0" />
-      </motion.div>
-    </motion.div>)
-  );
-};
-const items = [
-  {
-    title: "AI Content Generation",
-    description: (
-      <span className="text-sm">
-        Experience the power of AI in generating unique content.
-      </span>
-    ),
-    header: <SkeletonOne />,
-    className: "md:col-span-1",
-    icon: <IconClipboardCopy className="h-4 w-4 text-neutral-500" />,
-  },
-  {
-    title: "Automated Proofreading",
-    description: (
-      <span className="text-sm">
-        Let AI handle the proofreading of your documents.
-      </span>
-    ),
-    header: <SkeletonTwo />,
-    className: "md:col-span-1",
-    icon: <IconFileBroken className="h-4 w-4 text-neutral-500" />,
-  },
-  {
-    title: "Contextual Suggestions",
-    description: (
-      <span className="text-sm">
-        Get AI-powered suggestions based on your writing context.
-      </span>
-    ),
-    header: <SkeletonThree />,
-    className: "md:col-span-1",
-    icon: <IconSignature className="h-4 w-4 text-neutral-500" />,
-  },
-  {
-    title: "Sentiment Analysis",
-    description: (
-      <span className="text-sm">
-        Understand the sentiment of your text with AI analysis.
-      </span>
-    ),
-    header: <SkeletonFour />,
-    className: "md:col-span-2",
-    icon: <IconTableColumn className="h-4 w-4 text-neutral-500" />,
-  },
-
-  {
-    title: "Text Summarization",
-    description: (
-      <span className="text-sm">
-        Summarize your lengthy documents with AI technology.
-      </span>
-    ),
-    header: <SkeletonFive />,
-    className: "md:col-span-1",
-    icon: <IconBoxAlignRightFilled className="h-4 w-4 text-neutral-500" />,
-  },
-];
