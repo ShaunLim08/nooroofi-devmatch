@@ -1,0 +1,353 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+package contract.v1;
+
+message Events {
+    repeated Polymarketctf_FeeCharged polymarketctf_fee_chargeds = 1;
+    repeated Polymarketctf_NewAdmin polymarketctf_new_admins = 2;
+    repeated Polymarketctf_NewOperator polymarketctf_new_operators = 3;
+    repeated Polymarketctf_OrderCancelled polymarketctf_order_cancelleds = 4;
+    repeated Polymarketctf_OrderFilled polymarketctf_order_filleds = 5;
+    repeated Polymarketctf_OrdersMatched polymarketctf_orders_matcheds = 6;
+    repeated Polymarketctf_ProxyFactoryUpdated polymarketctf_proxy_factory_updateds = 7;
+    repeated Polymarketctf_RemovedAdmin polymarketctf_removed_admins = 8;
+    repeated Polymarketctf_RemovedOperator polymarketctf_removed_operators = 9;
+    repeated Polymarketctf_SafeFactoryUpdated polymarketctf_safe_factory_updateds = 10;
+    repeated Polymarketctf_TokenRegistered polymarketctf_token_registereds = 11;
+    repeated Polymarketctf_TradingPaused polymarketctf_trading_pauseds = 12;
+    repeated Polymarketctf_TradingUnpaused polymarketctf_trading_unpauseds = 13;
+}
+
+message Calls {
+    repeated Polymarketctf_AddAdminCall polymarketctf_call_add_admins = 1;
+    repeated Polymarketctf_AddOperatorCall polymarketctf_call_add_operators = 2;
+    repeated Polymarketctf_CancelOrderCall polymarketctf_call_cancel_orders = 3;
+    repeated Polymarketctf_CancelOrdersCall polymarketctf_call_cancel_orders_batch = 4;  // FIXED: Different field name
+    repeated Polymarketctf_FillOrderCall polymarketctf_call_fill_orders = 5;
+    repeated Polymarketctf_FillOrdersCall polymarketctf_call_fill_orders_batch = 6;  // FIXED: Different field name
+    repeated Polymarketctf_IncrementNonceCall polymarketctf_call_increment_nonces = 7;
+    repeated Polymarketctf_MatchOrdersCall polymarketctf_call_match_orders = 8;
+    repeated Polymarketctf_OnErc1155BatchReceivedCall polymarketctf_call_on_erc1155_batch_receiveds = 9;
+    repeated Polymarketctf_OnErc1155ReceivedCall polymarketctf_call_on_erc1155_receiveds = 10;
+    repeated Polymarketctf_PauseTradingCall polymarketctf_call_pause_tradings = 11;
+    repeated Polymarketctf_RegisterTokenCall polymarketctf_call_register_tokens = 12;
+    repeated Polymarketctf_RemoveAdminCall polymarketctf_call_remove_admins = 13;
+    repeated Polymarketctf_RemoveOperatorCall polymarketctf_call_remove_operators = 14;
+    repeated Polymarketctf_RenounceAdminRoleCall polymarketctf_call_renounce_admin_roles = 15;
+    repeated Polymarketctf_RenounceOperatorRoleCall polymarketctf_call_renounce_operator_roles = 16;
+    repeated Polymarketctf_SetProxyFactoryCall polymarketctf_call_set_proxy_factories = 17;
+    repeated Polymarketctf_SetSafeFactoryCall polymarketctf_call_set_safe_factories = 18;
+    repeated Polymarketctf_UnpauseTradingCall polymarketctf_call_unpause_tradings = 19;
+}
+
+message EventsCalls {
+    Events events = 1;
+    Calls calls = 2;
+}
+
+// EVENT MESSAGES
+message Polymarketctf_FeeCharged {
+    string evt_tx_hash = 1;
+    uint32 evt_index = 2;
+    google.protobuf.Timestamp evt_block_time = 3;
+    uint64 evt_block_number = 4;
+    bytes receiver = 5;
+    string token_id = 6;
+    string amount = 7;
+}
+
+message Polymarketctf_NewAdmin {
+    string evt_tx_hash = 1;
+    uint32 evt_index = 2;
+    google.protobuf.Timestamp evt_block_time = 3;
+    uint64 evt_block_number = 4;
+    bytes new_admin_address = 5;
+    bytes admin = 6;
+}
+
+message Polymarketctf_NewOperator {
+    string evt_tx_hash = 1;
+    uint32 evt_index = 2;
+    google.protobuf.Timestamp evt_block_time = 3;
+    uint64 evt_block_number = 4;
+    bytes new_operator_address = 5;
+    bytes admin = 6;
+}
+
+message Polymarketctf_OrderCancelled {
+    string evt_tx_hash = 1;
+    uint32 evt_index = 2;
+    google.protobuf.Timestamp evt_block_time = 3;
+    uint64 evt_block_number = 4;
+    bytes order_hash = 5;
+}
+
+message Polymarketctf_OrderFilled {
+    string evt_tx_hash = 1;
+    uint32 evt_index = 2;
+    google.protobuf.Timestamp evt_block_time = 3;
+    uint64 evt_block_number = 4;
+    bytes order_hash = 5;
+    bytes maker = 6;
+    bytes taker = 7;
+    string maker_asset_id = 8;
+    string taker_asset_id = 9;
+    string maker_amount_filled = 10;
+    string taker_amount_filled = 11;
+    string fee = 12;
+}
+
+message Polymarketctf_OrdersMatched {
+    string evt_tx_hash = 1;
+    uint32 evt_index = 2;
+    google.protobuf.Timestamp evt_block_time = 3;
+    uint64 evt_block_number = 4;
+    bytes taker_order_hash = 5;
+    bytes taker_order_maker = 6;
+    string maker_asset_id = 7;
+    string taker_asset_id = 8;
+    string maker_amount_filled = 9;
+    string taker_amount_filled = 10;
+}
+
+message Polymarketctf_ProxyFactoryUpdated {
+    string evt_tx_hash = 1;
+    uint32 evt_index = 2;
+    google.protobuf.Timestamp evt_block_time = 3;
+    uint64 evt_block_number = 4;
+    bytes old_proxy_factory = 5;
+    bytes new_proxy_factory = 6;
+}
+
+message Polymarketctf_RemovedAdmin {
+    string evt_tx_hash = 1;
+    uint32 evt_index = 2;
+    google.protobuf.Timestamp evt_block_time = 3;
+    uint64 evt_block_number = 4;
+    bytes removed_admin = 5;
+    bytes admin = 6;
+}
+
+message Polymarketctf_RemovedOperator {
+    string evt_tx_hash = 1;
+    uint32 evt_index = 2;
+    google.protobuf.Timestamp evt_block_time = 3;
+    uint64 evt_block_number = 4;
+    bytes removed_operator = 5;
+    bytes admin = 6;
+}
+
+message Polymarketctf_SafeFactoryUpdated {
+    string evt_tx_hash = 1;
+    uint32 evt_index = 2;
+    google.protobuf.Timestamp evt_block_time = 3;
+    uint64 evt_block_number = 4;
+    bytes old_safe_factory = 5;
+    bytes new_safe_factory = 6;
+}
+
+message Polymarketctf_TokenRegistered {
+    string evt_tx_hash = 1;
+    uint32 evt_index = 2;
+    google.protobuf.Timestamp evt_block_time = 3;
+    uint64 evt_block_number = 4;
+    string token0 = 5;
+    string token1 = 6;
+    bytes condition_id = 7;
+}
+
+message Polymarketctf_TradingPaused {
+    string evt_tx_hash = 1;
+    uint32 evt_index = 2;
+    google.protobuf.Timestamp evt_block_time = 3;
+    uint64 evt_block_number = 4;
+    bytes pauser = 5;
+}
+
+message Polymarketctf_TradingUnpaused {
+    string evt_tx_hash = 1;
+    uint32 evt_index = 2;
+    google.protobuf.Timestamp evt_block_time = 3;
+    uint64 evt_block_number = 4;
+    bytes pauser = 5;
+}
+
+// CALL MESSAGES
+message Polymarketctf_AddAdminCall {
+    string call_tx_hash = 1;
+    google.protobuf.Timestamp call_block_time = 2;
+    uint64 call_block_number = 3;
+    uint64 call_ordinal = 4;
+    bool call_success = 5;
+    bytes admin = 6;
+}
+
+message Polymarketctf_AddOperatorCall {
+    string call_tx_hash = 1;
+    google.protobuf.Timestamp call_block_time = 2;
+    uint64 call_block_number = 3;
+    uint64 call_ordinal = 4;
+    bool call_success = 5;
+    bytes operator = 6;
+}
+
+message Polymarketctf_CancelOrderCall {
+    string call_tx_hash = 1;
+    google.protobuf.Timestamp call_block_time = 2;
+    uint64 call_block_number = 3;
+    uint64 call_ordinal = 4;
+    bool call_success = 5;
+}
+
+message Polymarketctf_CancelOrdersCall {
+    string call_tx_hash = 1;
+    google.protobuf.Timestamp call_block_time = 2;
+    uint64 call_block_number = 3;
+    uint64 call_ordinal = 4;
+    bool call_success = 5;
+}
+
+message Polymarketctf_FillOrderCall {
+    string call_tx_hash = 1;
+    google.protobuf.Timestamp call_block_time = 2;
+    uint64 call_block_number = 3;
+    uint64 call_ordinal = 4;
+    bool call_success = 5;
+    string fill_amount = 6;
+}
+
+message Polymarketctf_FillOrdersCall {
+    string call_tx_hash = 1;
+    google.protobuf.Timestamp call_block_time = 2;
+    uint64 call_block_number = 3;
+    uint64 call_ordinal = 4;
+    bool call_success = 5;
+    repeated string fill_amounts = 6;
+}
+
+message Polymarketctf_IncrementNonceCall {
+    string call_tx_hash = 1;
+    google.protobuf.Timestamp call_block_time = 2;
+    uint64 call_block_number = 3;
+    uint64 call_ordinal = 4;
+    bool call_success = 5;
+}
+
+message Polymarketctf_MatchOrdersCall {
+    string call_tx_hash = 1;
+    google.protobuf.Timestamp call_block_time = 2;
+    uint64 call_block_number = 3;
+    uint64 call_ordinal = 4;
+    bool call_success = 5;
+    string taker_fill_amount = 6;
+    repeated string maker_fill_amounts = 7;
+}
+
+message Polymarketctf_OnErc1155BatchReceivedCall {
+    string call_tx_hash = 1;
+    google.protobuf.Timestamp call_block_time = 2;
+    uint64 call_block_number = 3;
+    uint64 call_ordinal = 4;
+    bool call_success = 5;
+    bytes param0 = 6;
+    bytes param1 = 7;
+    repeated string param2 = 8;
+    repeated string param3 = 9;
+    bytes param4 = 10;
+    bytes output_param0 = 11;
+}
+
+message Polymarketctf_OnErc1155ReceivedCall {
+    string call_tx_hash = 1;
+    google.protobuf.Timestamp call_block_time = 2;
+    uint64 call_block_number = 3;
+    uint64 call_ordinal = 4;
+    bool call_success = 5;
+    bytes param0 = 6;
+    bytes param1 = 7;
+    string param2 = 8;
+    string param3 = 9;
+    bytes param4 = 10;
+    bytes output_param0 = 11;
+}
+
+message Polymarketctf_PauseTradingCall {
+    string call_tx_hash = 1;
+    google.protobuf.Timestamp call_block_time = 2;
+    uint64 call_block_number = 3;
+    uint64 call_ordinal = 4;
+    bool call_success = 5;
+}
+
+message Polymarketctf_RegisterTokenCall {
+    string call_tx_hash = 1;
+    google.protobuf.Timestamp call_block_time = 2;
+    uint64 call_block_number = 3;
+    uint64 call_ordinal = 4;
+    bool call_success = 5;
+    string token = 6;
+    string complement = 7;
+    bytes condition_id = 8;
+}
+
+message Polymarketctf_RemoveAdminCall {
+    string call_tx_hash = 1;
+    google.protobuf.Timestamp call_block_time = 2;
+    uint64 call_block_number = 3;
+    uint64 call_ordinal = 4;
+    bool call_success = 5;
+    bytes admin = 6;
+}
+
+message Polymarketctf_RemoveOperatorCall {
+    string call_tx_hash = 1;
+    google.protobuf.Timestamp call_block_time = 2;
+    uint64 call_block_number = 3;
+    uint64 call_ordinal = 4;
+    bool call_success = 5;
+    bytes operator = 6;
+}
+
+message Polymarketctf_RenounceAdminRoleCall {
+    string call_tx_hash = 1;
+    google.protobuf.Timestamp call_block_time = 2;
+    uint64 call_block_number = 3;
+    uint64 call_ordinal = 4;
+    bool call_success = 5;
+}
+
+message Polymarketctf_RenounceOperatorRoleCall {
+    string call_tx_hash = 1;
+    google.protobuf.Timestamp call_block_time = 2;
+    uint64 call_block_number = 3;
+    uint64 call_ordinal = 4;
+    bool call_success = 5;
+}
+
+message Polymarketctf_SetProxyFactoryCall {
+    string call_tx_hash = 1;
+    google.protobuf.Timestamp call_block_time = 2;
+    uint64 call_block_number = 3;
+    uint64 call_ordinal = 4;
+    bool call_success = 5;
+    bytes u_new_proxy_factory = 6;
+}
+
+message Polymarketctf_SetSafeFactoryCall {
+    string call_tx_hash = 1;
+    google.protobuf.Timestamp call_block_time = 2;
+    uint64 call_block_number = 3;
+    uint64 call_ordinal = 4;
+    bool call_success = 5;
+    bytes u_new_safe_factory = 6;
+}
+
+message Polymarketctf_UnpauseTradingCall {
+    string call_tx_hash = 1;
+    google.protobuf.Timestamp call_block_time = 2;
+    uint64 call_block_number = 3;
+    uint64 call_ordinal = 4;
+    bool call_success = 5;
+}
