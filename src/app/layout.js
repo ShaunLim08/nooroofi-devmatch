@@ -1,6 +1,7 @@
 import localFont from 'next/font/local';
 import './globals.css';
 import NoorooNavbar from '@/components/ui/nooroo-navbar';
+import PrivyProviderWrapper from '@/components/providers/privy-provider';
 
 const geistSans = localFont({
   src: './fonts/GeistVF.woff',
@@ -24,8 +25,10 @@ export default function RootLayout({ children }) {
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <NoorooNavbar />
-        {children}
+        <PrivyProviderWrapper>
+          <NoorooNavbar />
+          {children}
+        </PrivyProviderWrapper>
       </body>
     </html>
   );

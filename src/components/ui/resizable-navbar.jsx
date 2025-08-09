@@ -112,7 +112,7 @@ export const NavItems = ({
           {pathname === item.link && (
             <motion.div
               layoutId="active"
-              className="absolute inset-0 h-full w-full rounded-full bg-neutral-900 dark:bg-white" />
+              className="absolute inset-0 h-full w-full rounded-full bg-orange-500 dark:bg-orange-400" />
           )}
           <span className={cn(
             "relative z-20",
@@ -209,8 +209,8 @@ export const MobileNavItems = ({ items, onItemClick }) => {
           className={cn(
             "px-4 py-2 rounded-lg transition-colors duration-200 text-sm font-medium",
             pathname === item.link
-              ? "bg-neutral-900 text-white dark:bg-white dark:text-black"
-              : "text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+              ? "bg-orange-500 text-white dark:bg-orange-400 dark:text-white"
+              : "text-neutral-600 dark:text-neutral-300 hover:bg-orange-100 dark:hover:bg-orange-900/20"
           )}>
           {item.name}
         </Link>
@@ -235,10 +235,14 @@ export const NavbarLogo = () => {
     <Link
       href="/"
       className="relative z-20 mr-4 flex items-center space-x-2 px-2 py-1 text-sm font-normal text-black">
-      <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
-        <span className="text-white font-bold text-lg">N</span>
+      <div className="w-8 h-8 flex items-center justify-center">
+        <img 
+          src="/NoorooFi.png" 
+          alt="NoorooFi Logo" 
+          className="w-8 h-8 object-contain"
+        />
       </div>
-      <span className="font-bold text-black dark:text-white text-lg">Nooroo Fi</span>
+      <span className="font-bold text-orange-500 dark:text-orange-400 text-lg">NoorooFi</span>
     </Link>
   );
 };

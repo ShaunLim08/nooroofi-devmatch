@@ -55,8 +55,9 @@ const MarketCard = ({ market, index }) => {
           <div className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">
             Current Price
           </div>
-          <div className="text-xl font-bold text-neutral-900 dark:text-neutral-100">
-            ${market.price.toFixed(2)}
+          <div className="text-xl font-bold text-neutral-900 dark:text-neutral-100 flex items-center">
+            <img src="/usdc.png" alt="USDC" className="w-4 h-4 mr-1" />
+            {market.price.toFixed(2)}
           </div>
         </div>
         <div>
@@ -89,8 +90,9 @@ const MarketCard = ({ market, index }) => {
         </div>
         <div className="flex items-center">
           <IconChartLine className="h-3 w-3 text-neutral-400 mr-1" />
-          <span className="text-neutral-500 dark:text-neutral-400">
-            ${market.volume}
+          <span className="text-neutral-500 dark:text-neutral-400 flex items-center">
+            <img src="/usdc.png" alt="USDC" className="w-3 h-3 mr-1" />
+            {market.volume}
           </span>
         </div>
         <div className="flex items-center">
@@ -136,7 +138,7 @@ const AIAssistant = () => {
       id: 2,
       type: 'assistant',
       message:
-        'Based on The Graph data, I see strong activity in crypto predictions (Bitcoin $100K target) and political markets (US Election 2024). The Bitcoin market has 68% probability with $2.4M volume.',
+        'Based on The Graph data, I see strong activity in crypto predictions (Bitcoin $100K target) and political markets (US Election 2024). The Graph shows the Bitcoin market has 68% probability with $2.4M volume.',
       timestamp: '2:31 PM',
     },
     {
@@ -149,7 +151,7 @@ const AIAssistant = () => {
       id: 4,
       type: 'assistant',
       message:
-        'From The Graph analytics, markets with longer time horizons show 94.2% average accuracy. Climate agreement predictions (82% probability) and Tesla stock targets are performing well with consistent trader engagement.',
+        'From The Graph analytics, markets with longer time horizons show 94.2% average accuracy. The Graph data indicates climate agreement predictions (82% probability) and Tesla stock targets are performing well with consistent trader engagement.',
       timestamp: '2:36 PM',
     },
   ];
@@ -177,8 +179,14 @@ const AIAssistant = () => {
             <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">
               AI Market Analyst
             </h3>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400">
-              Powered by The Graph • Real-time insights
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 flex items-center">
+              Powered by{' '}
+              <img
+                src="/thegraph.png"
+                alt="The Graph"
+                className="h-3 w-3 mx-1"
+              />
+              The Graph • Real-time insights
             </p>
           </div>
           <div className="ml-auto">
@@ -388,7 +396,7 @@ export default function MarketPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800 pt-32 pb-8">
+    <div className="min-h-screen bg-white dark:from-neutral-900 dark:to-neutral-800 pt-32 pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
@@ -453,8 +461,9 @@ export default function MarketPage() {
             <div className="text-sm text-neutral-500 dark:text-neutral-400 mb-1">
               Total Volume
             </div>
-            <div className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
-              $2.4M
+            <div className="text-2xl font-bold text-neutral-900 dark:text-neutral-100 flex items-center">
+              <img src="/usdc.png" alt="USDC" className="w-5 h-5 mr-1" />
+              2.4M
             </div>
             <div className="text-xs text-green-500 flex items-center mt-1">
               <IconTrendingUp className="h-3 w-3 mr-1" />

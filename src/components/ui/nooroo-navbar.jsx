@@ -12,6 +12,7 @@ import {
   MobileNavToggle,
   NavbarLogo,
 } from './resizable-navbar';
+import PrivyLoginButton from './privy-login-button';
 
 const NoorooNavbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -24,6 +25,10 @@ const NoorooNavbar = () => {
     {
       name: 'Market',
       link: '/market',
+    },
+    {
+      name: 'Stalk',
+      link: '/stalk',
     },
     {
       name: 'Profile',
@@ -46,13 +51,21 @@ const NoorooNavbar = () => {
         <NavBody>
           <NavbarLogo />
           <NavItems items={navItems} />
+          <div className="relative z-20">
+            <PrivyLoginButton />
+          </div>
         </NavBody>
 
         {/* Mobile Navigation */}
         <MobileNav>
           <MobileNavHeader>
             <NavbarLogo />
-            <MobileNavToggle isOpen={isOpen} onClick={toggleMobileMenu} />
+            <div className="flex items-center space-x-2">
+              <div className="relative z-20">
+                <PrivyLoginButton />
+              </div>
+              <MobileNavToggle isOpen={isOpen} onClick={toggleMobileMenu} />
+            </div>
           </MobileNavHeader>
           <MobileNavMenu isOpen={isOpen} onClose={closeMobileMenu}>
             <MobileNavItems items={navItems} onItemClick={closeMobileMenu} />

@@ -37,21 +37,21 @@ export default function Home() {
     {
       title: 'Will Bitcoin reach $100k by 2024?',
       created: '2 days ago',
-      volume: '$2.4M',
+      volume: '2.4M',
       probability: '68%',
       change: '+5.2%',
     },
     {
       title: 'US Election 2024 Winner',
       created: '1 week ago',
-      volume: '$1.8M',
+      volume: '1.8M',
       probability: '45%',
       change: '-2.1%',
     },
     {
       title: 'Tesla Stock Price Above $300',
       created: '3 days ago',
-      volume: '$950K',
+      volume: '950K',
       probability: '72%',
       change: '+8.7%',
     },
@@ -61,28 +61,28 @@ export default function Home() {
     {
       title: 'AI will pass Turing Test in 2024',
       created: '2 hours ago',
-      volume: '$45K',
+      volume: '45K',
       probability: '34%',
     },
     {
       title: 'SpaceX Mars Mission Success',
       created: '5 hours ago',
-      volume: '$78K',
+      volume: '78K',
       probability: '28%',
     },
     {
       title: 'Ethereum 2.0 Full Launch',
       created: '1 day ago',
-      volume: '$156K',
+      volume: '156K',
       probability: '89%',
     },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 pt-32">
+    <div className="min-h-screen bg-white dark:from-gray-900 dark:to-gray-800 pt-32">
       {/* Welcome Section */}
       <div className="container mx-auto px-4 py-8">
-        <Card className="mb-8 bg-gradient-to-r from-blue-600 to-purple-600 text-white border-0">
+        <Card className="mb-8 bg-gradient-to-r from-orange-500 to-orange-600 text-white border-0">
           <CardContent className="p-8">
             <div className="text-center space-y-4">
               <h1 className="text-4xl font-bold">Welcome to NoorooFi</h1>
@@ -90,18 +90,24 @@ export default function Home() {
                 Prediction Market Aggregator, Analytics Dashboard & Scanner with
                 AI
               </p>
-              <p className="text-lg opacity-80">
-                Powered by <span className="font-semibold">The Graph</span>{' '}
-                protocol for decentralized data indexing
+              <p className="text-lg opacity-80 flex items-center justify-center">
+                Powered by{' '}
+                <img
+                  src="/thegraph.png"
+                  alt="The Graph"
+                  className="h-5 w-5 mx-2"
+                />
+                <span className="font-semibold">The Graph </span> protocol for
+                decentralized data indexing
               </p>
               <div className="flex justify-center space-x-4 mt-6">
-                <Badge variant="secondary" className="text-blue-600">
+                <Badge variant="secondary" className="text-orange-600">
                   Real-time Analytics
                 </Badge>
-                <Badge variant="secondary" className="text-blue-600">
+                <Badge variant="secondary" className="text-orange-600">
                   AI-Powered Insights
                 </Badge>
-                <Badge variant="secondary" className="text-blue-600">
+                <Badge variant="secondary" className="text-orange-600">
                   Multi-Platform Aggregation
                 </Badge>
               </div>
@@ -117,7 +123,7 @@ export default function Home() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <IconTrendingUp className="h-5 w-5 text-green-600" />
+                    <IconTrendingUp className="h-5 w-5 text-orange-500" />
                     <CardTitle>Trending Markets</CardTitle>
                   </div>
                   <Select
@@ -155,6 +161,11 @@ export default function Home() {
                           </span>
                           <span className="flex items-center">
                             <IconVolume className="h-4 w-4 mr-1" />
+                            <img
+                              src="/usdc.png"
+                              alt="USDC"
+                              className="w-3 h-3 mr-1"
+                            />
                             {market.volume}
                           </span>
                         </div>
@@ -186,7 +197,7 @@ export default function Home() {
               <CardHeader>
                 <div className="space-y-3">
                   <div className="flex items-center space-x-2">
-                    <IconClock className="h-5 w-5 text-blue-600" />
+                    <IconClock className="h-5 w-5 text-orange-500" />
                     <CardTitle className="text-lg">New Markets</CardTitle>
                   </div>
                   <Select value={newFilter} onValueChange={setNewFilter}>
@@ -217,7 +228,14 @@ export default function Home() {
                       </h4>
                       <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-2">
                         <span>{market.created}</span>
-                        <span>{market.volume}</span>
+                        <span className="flex items-center">
+                          <img
+                            src="/usdc.png"
+                            alt="USDC"
+                            className="w-3 h-3 mr-1"
+                          />
+                          {market.volume}
+                        </span>
                       </div>
                       <div className="mt-2">
                         <Badge variant="outline" className="text-xs">
@@ -237,7 +255,13 @@ export default function Home() {
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <IconChartBar className="h-5 w-5" />
-                  <span>Market Analytics - Powered by The Graph</span>
+                  <span>Market Analytics - Powered by</span>
+                  <img
+                    src="/thegraph.png"
+                    alt="The Graph"
+                    className="h-5 w-5"
+                  />
+                  <span>The Graph</span>
                 </CardTitle>
                 <CardDescription>
                   Real-time market data visualization and trends
@@ -246,7 +270,7 @@ export default function Home() {
               <CardContent className="h-[calc(100%-100px)]">
                 <div className="h-full bg-gradient-to-br from-blue-100 to-purple-100 dark:from-gray-700 dark:to-gray-600 rounded-lg flex flex-col items-center justify-center space-y-4">
                   <div className="text-center space-y-4">
-                    <IconChartBar className="h-16 w-16 mx-auto text-blue-600" />
+                    <IconChartBar className="h-16 w-16 mx-auto text-orange-500" />
                     <div>
                       <p className="text-lg font-semibold text-gray-700 dark:text-gray-200">
                         Interactive Chart Component
@@ -258,15 +282,20 @@ export default function Home() {
                     </div>
                     <div className="grid grid-cols-3 gap-4 mt-6">
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600">
-                          $45.2M
+                        <div className="text-2xl font-bold text-orange-600 flex items-center">
+                          <img
+                            src="/usdc.png"
+                            alt="USDC"
+                            className="w-5 h-5 mr-1"
+                          />
+                          45.2M
                         </div>
                         <div className="text-xs text-gray-500">
                           Total Volume
                         </div>
                       </div>
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-green-600">
+                        <div className="text-2xl font-bold text-orange-600">
                           87.3%
                         </div>
                         <div className="text-xs text-gray-500">
@@ -274,7 +303,7 @@ export default function Home() {
                         </div>
                       </div>
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-purple-600">
+                        <div className="text-2xl font-bold text-orange-600">
                           24h
                         </div>
                         <div className="text-xs text-gray-500">
