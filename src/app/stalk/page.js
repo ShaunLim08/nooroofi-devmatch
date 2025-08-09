@@ -260,26 +260,26 @@ export default function StalkPage() {
             </p>
           </div>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex space-x-1">
           <Button
             variant="outline"
             size="sm"
-            className="border-orange-200 text-orange-600 hover:bg-orange-50"
+            className="border-orange-200 text-orange-600 hover:bg-orange-50 text-xs px-2 py-1 h-7"
           >
-            <IconEye className="h-4 w-4 mr-1" />
+            <IconEye className="h-3 w-3 mr-1" />
             View
           </Button>
           <Button
             variant="outline"
             size="sm"
-            className="border-blue-200 text-blue-600 hover:bg-blue-50"
+            className="border-blue-200 text-blue-600 hover:bg-blue-50 text-xs px-2 py-1 h-7"
             onClick={(e) => {
               e.stopPropagation();
               openCopyTradeModal(user);
             }}
           >
-            <IconTarget className="h-4 w-4 mr-1" />
-            CopyTrade
+            <IconTarget className="h-3 w-3 mr-1" />
+            Copy
           </Button>
         </div>
       </div>
@@ -437,77 +437,81 @@ export default function StalkPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white border-0">
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-orange-100 text-xs font-medium">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 pr-2">
+                      <p className="text-orange-100 text-xs font-medium mb-1">
                         Total Volume
                       </p>
-                      <p className="text-2xl font-bold flex items-center">
+                      <div className="flex items-center flex-wrap">
                         <img
                           src="/usdc.png"
                           alt="USDC"
-                          className="w-5 h-5 mr-2"
+                          className="w-4 h-4 mr-1 flex-shrink-0"
                         />
-                        {user.totalVolume?.toLocaleString() || '0'}
-                      </p>
+                        <p className="text-lg font-bold break-all">
+                          {user.totalVolume?.toLocaleString() || '0'}
+                        </p>
+                      </div>
                     </div>
-                    <IconWallet className="h-8 w-8 text-orange-200" />
+                    <IconWallet className="h-6 w-6 text-orange-200 flex-shrink-0" />
                   </div>
                 </CardContent>
               </Card>
 
               <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white border-0">
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-green-100 text-xs font-medium">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 pr-2">
+                      <p className="text-green-100 text-xs font-medium mb-1">
                         Win Rate
                       </p>
-                      <p className="text-2xl font-bold">{user.winRate || 0}%</p>
+                      <p className="text-lg font-bold">{user.winRate || 0}%</p>
                     </div>
-                    <IconTarget className="h-8 w-8 text-green-200" />
+                    <IconTarget className="h-6 w-6 text-green-200 flex-shrink-0" />
                   </div>
                 </CardContent>
               </Card>
 
               <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white border-0">
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-blue-100 text-xs font-medium">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 pr-2">
+                      <p className="text-blue-100 text-xs font-medium mb-1">
                         Total PnL
                       </p>
-                      <p
-                        className={`text-2xl font-bold flex items-center ${
-                          user.totalPnl >= 0 ? '' : 'text-red-200'
-                        }`}
-                      >
+                      <div className="flex items-center flex-wrap">
                         <img
                           src="/usdc.png"
                           alt="USDC"
-                          className="w-5 h-5 mr-2"
+                          className="w-4 h-4 mr-1 flex-shrink-0"
                         />
-                        {user.totalPnl >= 0 ? '+' : ''}
-                        {user.totalPnl?.toLocaleString() || '0'}
-                      </p>
+                        <p
+                          className={`text-lg font-bold break-all ${
+                            user.totalPnl >= 0 ? '' : 'text-red-200'
+                          }`}
+                        >
+                          {user.totalPnl >= 0 ? '+' : ''}
+                          {user.totalPnl?.toLocaleString() || '0'}
+                        </p>
+                      </div>
                     </div>
-                    <IconTrendingUp className="h-8 w-8 text-blue-200" />
+                    <IconTrendingUp className="h-6 w-6 text-blue-200 flex-shrink-0" />
                   </div>
                 </CardContent>
               </Card>
 
               <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white border-0">
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-purple-100 text-xs font-medium">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 pr-2">
+                      <p className="text-purple-100 text-xs font-medium mb-1">
                         Positions
                       </p>
-                      <p className="text-2xl font-bold">
+                      <p className="text-lg font-bold">
                         {user.totalPositions || 0}
                       </p>
                     </div>
-                    <IconCalendar className="h-8 w-8 text-purple-200" />
+                    <IconCalendar className="h-6 w-6 text-purple-200 flex-shrink-0" />
                   </div>
                 </CardContent>
               </Card>

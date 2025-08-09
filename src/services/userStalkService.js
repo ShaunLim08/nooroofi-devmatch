@@ -2,7 +2,7 @@ import { request } from 'graphql-request';
 
 const GRAPH_ENDPOINT =
   'https://gateway.thegraph.com/api/subgraphs/id/6c58N5U4MtQE2Y8njfVrrAfRykzfqajMGeTMEvMmskVz';
-const POLYMARKET_ENDPOINT = 'https://gamma-api.polymarket.com/markets';
+const POLYMARKET_ENDPOINT = '/api/polymarket';
 
 const HEADERS = {
   Authorization: 'Bearer b4b9fa0f76044607d30bda744ccb992d',

@@ -2,7 +2,7 @@ import { request } from 'graphql-request';
 
 // Configuration matching your existing setup
 const GRAPH_ENDPOINT = 'https://gateway.thegraph.com/api/subgraphs/id/GquFeuWzLBPVLzFQjncbbS9nmGCSQpH4kdE4FHVCapp2';
-const POLYMARKET_ENDPOINT = 'https://gamma-api.polymarket.com/markets';
+const POLYMARKET_ENDPOINT = '/api/polymarket'; // Use our API route instead of direct Polymarket API
 
 const HEADERS = {
   Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUBGRAPH_API_KEY}`,
@@ -115,12 +115,12 @@ const formatVolume = (volume) => {
   return volume.toFixed(2);
 };
 
-// Enhanced market data fetching with Polymarket integration
+// Enhanced market data fetching with Polymarket integration and filtering
 async function fetchMarketDataForTokens(tokenIds) {
   const marketDataMap = new Map();
   
-  // Batch fetch market data from Polymarket
-  const batchSize = 10;
+  // Batch fetch market data from Polymarket - smaller batch size to prevent long URLs
+  const batchSize = 5; // Reduced from 10 to keep URLs manageable
   for (let i = 0; i < tokenIds.length; i += batchSize) {
     const batch = tokenIds.slice(i, i + batchSize);
     const tokenIdParams = batch.join(',');
@@ -131,13 +131,40 @@ async function fetchMarketDataForTokens(tokenIds) {
       
       if (response.ok) {
         const markets = await response.json();
-        markets.forEach(market => {
+        
+        // Filter for recent and high volume markets
+        const filteredMarkets = markets.filter(market => {
+          // Check if market data exists
+          if (!market) return false;
+          
+          // Filter by volume (minimum 1000 volume)
+          const volume = parseFloat(market.volume || 0);
+          if (volume < 1000) return false;
+          
+          // Filter by recency - markets created within last 30 days
+          const endDate = new Date(market.end_date_iso);
+          const now = new Date();
+          const thirtyDaysFromNow = new Date(now.getTime() + (30 * 24 * 60 * 60 * 1000));
+          
+          // Market should still be active (end date in future) and not too far in future
+          if (endDate <= now || endDate > thirtyDaysFromNow) return false;
+          
+          // Filter by liquidity if available
+          const liquidity = parseFloat(market.liquidity || 0);
+          if (liquidity < 500) return false;
+          
+          return true;
+        });
+        
+        filteredMarkets.forEach(market => {
           if (market.clob_token_ids) {
             market.clob_token_ids.forEach(tokenId => {
               marketDataMap.set(tokenId, market);
             });
           }
         });
+      } else {
+        console.warn(`Failed to fetch market data for batch ${i}: ${response.status}`);
       }
     } catch (error) {
       console.warn(`Error fetching market data for batch ${i}:`, error);
@@ -145,6 +172,68 @@ async function fetchMarketDataForTokens(tokenIds) {
   }
   
   return marketDataMap;
+}
+
+// Fetch recent high-volume markets directly from Polymarket API
+async function fetchRecentHighVolumeMarkets(limit = 10) {
+  try {
+    // We can't directly query Polymarket for recent markets with filters
+    // So we'll fetch a larger sample and filter client-side
+    const sampleSize = Math.min(50, limit * 5); // Get more for filtering
+    
+    // Fetch recent trades to get active token IDs
+    const trades = await fetchRecentTrades(100);
+    
+    // Get unique token IDs from recent trades
+    const recentTokenIds = [...new Set([
+      ...trades.allTrades.map(t => t.makerAssetId),
+      ...trades.allTrades.map(t => t.takerAssetId)
+    ])].slice(0, sampleSize);
+    
+    if (recentTokenIds.length === 0) {
+      return [];
+    }
+    
+    // Fetch market data for these tokens
+    const marketDataMap = await fetchMarketDataForTokens(recentTokenIds);
+    
+    // Convert to array and sort by volume and recency
+    const markets = Array.from(marketDataMap.values())
+      .filter(market => {
+        // Additional filtering for high volume
+        const volume = parseFloat(market.volume || 0);
+        return volume >= 5000; // Higher threshold for this function
+      })
+      .map(market => {
+        const volume = parseFloat(market.volume || 0);
+        const liquidity = parseFloat(market.liquidity || 0);
+        const endDate = new Date(market.end_date_iso);
+        const now = new Date();
+        
+        // Calculate days until end
+        const daysUntilEnd = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+        
+        return {
+          ...market,
+          volumeScore: volume,
+          liquidityScore: liquidity,
+          daysUntilEnd,
+          recencyScore: Math.max(0, 30 - daysUntilEnd), // Higher score for sooner ending
+        };
+      })
+      .sort((a, b) => {
+        // Sort by volume first, then by recency
+        const volumeDiff = b.volumeScore - a.volumeScore;
+        return volumeDiff !== 0 ? volumeDiff : b.recencyScore - a.recencyScore;
+      })
+      .slice(0, limit);
+    
+    return markets;
+    
+  } catch (error) {
+    console.error('Error fetching recent high-volume markets:', error);
+    return [];
+  }
 }
 
 // Main API functions
@@ -416,20 +505,29 @@ export async function fetchPopularMarkets(limit = 10) {
       });
     });
 
-    // Get top tokens by activity
+    // Get top tokens by activity and volume
     const topTokens = Array.from(tokenActivity.entries())
-      .sort((a, b) => b[1].count - a[1].count)
-      .slice(0, limit * 2); // Get more to account for filtering
+      .sort((a, b) => {
+        // Sort by volume first, then by count
+        const volumeDiff = b[1].volume - a[1].volume;
+        return volumeDiff !== 0 ? volumeDiff : b[1].count - a[1].count;
+      })
+      .slice(0, limit * 3); // Get more to account for filtering
 
     // Fetch market data for top tokens
     const topTokenIds = topTokens.map(([tokenId]) => tokenId);
     const marketDataMap = await fetchMarketDataForTokens(topTokenIds);
 
-    // Create popular markets list
+    // Create popular markets list with additional filtering and sorting
     const popularMarkets = topTokens
       .map(([tokenId, activity]) => {
         const marketData = marketDataMap.get(tokenId);
         if (!marketData) return null;
+
+        // Calculate a popularity score based on volume and activity
+        const volumeScore = parseFloat(marketData.volume || 0);
+        const activityScore = activity.count * 100; // Weight activity
+        const popularityScore = volumeScore + activityScore;
 
         return {
           tokenId,
@@ -438,11 +536,15 @@ export async function fetchPopularMarkets(limit = 10) {
           question: marketData.question,
           category: marketData.category,
           volume: marketData.volume,
+          liquidity: marketData.liquidity,
           probability: calculateProbability(marketData),
           change24h: '0%', // Would need historical data
+          popularityScore,
+          endDate: marketData.end_date_iso,
         };
       })
       .filter(Boolean)
+      .sort((a, b) => b.popularityScore - a.popularityScore) // Sort by popularity score
       .slice(0, limit);
 
     return popularMarkets;
@@ -490,4 +592,5 @@ export default {
   fetchTokenPairs,
   fetchDashboardData,
   fetchPopularMarkets,
+  fetchRecentHighVolumeMarkets,
 };
