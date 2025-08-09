@@ -19,7 +19,7 @@ Built with Next.js and integrating multiple data sources, it serves traders, res
 
 ### 📈 **The Graph Subgraph**
 
-- **Repository**: [`nooroofi-subgraphs`](https://github.com/ShaunLim08/nooroofi-subgraphs)
+- **Folder**: [`nooroofi-subgraphs`](https://github.com/ShaunLim08/nooroofi-subgraphs)
 - **Primary Endpoint**: `https://gateway.thegraph.com/api/subgraphs/id/6c58N5U4MtQE2Y8njfVrrAfRykzfqajMGeTMEvMmskVz`
 - **Alternative Endpoint**: `https://api.goldsky.com/api/public/project_cl6mb8i9h0003e201j6li0diw/subgraphs/orderbook-subgraph/0.0.1/gn`
 - **Purpose**: Queries on-chain Polymarket data including user positions, trading activity, and market events
@@ -34,7 +34,7 @@ Built with Next.js and integrating multiple data sources, it serves traders, res
 
 ### 🌊 **The Graph Substream**
 
-- **Repository**: [`nooroofi-substream`](https://github.com/ShaunLim08/nooroofi-substream)
+- **Folder**: [`nooroofi-substream`](https://github.com/ShaunLim08/nooroofi-substream)
 - **Purpose**: Real-time streaming of Polymarket events for live updates
 - **Features**:
   - Live market creation notifications
@@ -46,7 +46,7 @@ Built with Next.js and integrating multiple data sources, it serves traders, res
 
 - **Implementation**: Direct token ID queries to Polymarket's REST API
 - **Data Flow**: Token IDs extracted from subgraph queries → Used to fetch detailed market data via `/api/polymarket` proxy endpoint
-- **Location**: [`src/app/api/polymarket/route.js`](src/app/api/polymarket/route.js) - CORS proxy for Polymarket API calls
+- **Location**: ([app/profile/page.js](https://github.com/ShaunLim08/nooroofi-devmatch/blob/main/src/app/profile/page.js) - CORS proxy for Polymarket API calls
 
 ---
 
@@ -54,7 +54,7 @@ Built with Next.js and integrating multiple data sources, it serves traders, res
 
 ### 🔗 **Smart Contracts Repository**
 
-- **Repository**: [`nooroofi-contracts`](https://github.com/ShaunLim08/nooroofi-contracts)
+- **Folder**: [`nooroofi-contracts`](https://github.com/ShaunLim08/nooroofi-contracts)
 - **Deployed Sepolia Contract**: [`0x81dc5f9ce084ad3d3e0feb4f3f1956463eeaf12c`](https://sepolia.etherscan.io/address/0x81dc5f9ce084ad3d3e0feb4f3f1956463eeaf12c)
 - **Network**: Sepolia Testnet
 - **Purpose**: Smart contracts for enhanced prediction market functionality
