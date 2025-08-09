@@ -2,6 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { useWallets } from '@privy-io/react-auth';
+import { motion } from 'framer-motion';
+import {
+  getUserProfile,
+  getOpenPositions,
+  getHistoricalPositions,
+  formatUserData,
+} from '@/services/userStalkService';
 import {
   Card,
   CardContent,
@@ -13,19 +20,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   IconUser,
-  IconSettings,
   IconTrendingUp,
   IconTrendingDown,
   IconChartBar,
   IconTarget,
   IconCoin,
   IconCalendar,
-  IconMail,
-  IconPhone,
-  IconMapPin,
-  IconEdit,
-  IconBell,
-  IconShield,
   IconWallet,
   IconHistory,
   IconAward,
@@ -41,26 +41,76 @@ import { cn } from '@/lib/utils';
 export default function ProfilePage() {
   const { wallets } = useWallets();
   const [activeTab, setActiveTab] = useState('overview');
+
+  // The Graph data states
+  const [userProfile, setUserProfile] = useState(null);
+  const [openPositions, setOpenPositions] = useState([]);
+  const [historicalPositions, setHistoricalPositions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Token data states
+  const [coingeckoTokens, setCoingeckoTokens] = useState([]);
   const [tokenBalances, setTokenBalances] = useState([]);
   const [historicalTokenData, setHistoricalTokenData] = useState([]);
   const [tokenMetadata, setTokenMetadata] = useState({});
-  const [tokenImages, setTokenImages] = useState({});
-  const [coingeckoTokens, setCoingeckoTokens] = useState([]);
+
+  // Token loading states
   const [loadingTokens, setLoadingTokens] = useState(false);
-  const [loadingHistorical, setLoadingHistorical] = useState(false);
   const [loadingMetadata, setLoadingMetadata] = useState(false);
   const [loadingCoingecko, setLoadingCoingecko] = useState(false);
-  const [surveyData, setSurveyData] = useState({
-    preferredTags: [],
-    riskProfile: '',
-    usageIntent: '',
-  });
+  const [loadingHistorical, setLoadingHistorical] = useState(false);
 
-  // Get connected wallet address
-  const connectedWallet = wallets.find(
-    (wallet) => wallet.connectorType === 'injected'
-  );
-  const walletAddress = connectedWallet?.address;
+  // Get wallet address
+  const walletAddress = wallets?.[0]?.address;
+
+  // Fetch user data from The Graph
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!walletAddress) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch data from The Graph
+        const [profile, openPos, historicalPos] = await Promise.all([
+          getUserProfile(walletAddress),
+          getOpenPositions(walletAddress),
+          getHistoricalPositions(walletAddress),
+        ]);
+
+        setUserProfile(profile);
+        setOpenPositions(openPos);
+        setHistoricalPositions(historicalPos);
+      } catch (err) {
+        console.error('Error fetching user data:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [walletAddress]);
+
+  // Format user data for display
+  const userData = userProfile
+    ? formatUserData(userProfile, walletAddress)
+    : {
+        address: walletAddress || '',
+        ensName: null,
+        totalVolume: 0,
+        totalPnl: 0,
+        winRate: 0,
+        totalPositions: 0,
+        avgPositionSize: 0,
+        openPositions: 0,
+        bestTrade: 0,
+      };
 
   // Fetch Coingecko token list for verification
   const fetchCoingeckoTokens = async () => {
@@ -113,16 +163,51 @@ export default function ProfilePage() {
     }
   };
 
-  // Check if a token is verified by Coingecko
-  const isTokenVerified = (contractAddress, symbol) => {
-    if (!coingeckoTokens || coingeckoTokens.length === 0) return true; // If no data, show all tokens
+  // Get token image from CoinGecko or fallback
+  const getTokenImage = (contractAddress, symbol, metadata) => {
+    // First check metadata
+    if (metadata?.image) return metadata.image;
 
-    // Handle native MATIC token
-    if (!contractAddress || contractAddress === '0x0000000000000000000000000000000000000000' || symbol?.toLowerCase() === 'matic') {
-      return true; // MATIC is always verified
+    // Known token images for Polygon
+    const knownTokenImages = {
+      '0x8f3cf7ad23cd3cadbd9735aff958023239c6a063':
+        'https://assets.coingecko.com/coins/images/9956/thumb/4943.png', // DAI
+      '0x2791bca1f2de4661ed88a30c99a7a9449aa84174':
+        'https://assets.coingecko.com/coins/images/6319/thumb/USD_Coin_icon.png', // USDC
+      '0xc2132d05d31c914a87c6611c10748aeb04b58e8f':
+        'https://assets.coingecko.com/coins/images/325/thumb/Tether-logo.png', // USDT
+      '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee':
+        'https://assets.coingecko.com/coins/images/4713/thumb/matic-token-icon.png', // MATIC
+    };
+
+    // Check for known token image
+    const knownImage = knownTokenImages[contractAddress?.toLowerCase()];
+    if (knownImage) return knownImage;
+
+    // Try to find CoinGecko token by contract address
+    if (coingeckoTokens && coingeckoTokens.length > 0) {
+      const coingeckoToken = coingeckoTokens.find((token) => {
+        if (token.platforms && token.platforms['polygon-pos']) {
+          return (
+            token.platforms['polygon-pos'].toLowerCase() ===
+            contractAddress?.toLowerCase()
+          );
+        }
+        return false;
+      });
+
+      if (coingeckoToken && coingeckoToken.image) {
+        return coingeckoToken.image;
+      }
     }
 
-    return coingeckoTokens.some((token) => {
+    return null;
+  };
+  const isTokenVerified = (contractAddress, symbol, name) => {
+    if (!coingeckoTokens || coingeckoTokens.length === 0) return true; // If no data, show all tokens
+
+    // First check against CoinGecko verification
+    const coingeckoVerified = coingeckoTokens.some((token) => {
       // Check if the contract address matches any platform
       if (token.platforms) {
         const polygonAddress = token.platforms['polygon-pos'];
@@ -134,111 +219,50 @@ export default function ProfilePage() {
         }
       }
 
-      // Also check by symbol as a fallback
+      // Also check by symbol as a fallback for known tokens
       return (
         token.symbol && token.symbol.toLowerCase() === symbol.toLowerCase()
       );
     });
-  };
 
-  // Fetch token details including image from CoinGecko
-  const fetchTokenDetails = async (contractAddress, symbol) => {
-    try {
-      let tokenId = null;
+    // If CoinGecko verified, return true
+    if (coingeckoVerified) return true;
 
-      // Handle native MATIC token (no contract address)
-      if (!contractAddress || contractAddress === '0x0000000000000000000000000000000000000000' || symbol?.toLowerCase() === 'matic') {
-        tokenId = 'matic-network';
-      } else {
-        // First try to find the token ID from our tokens list
-        const token = coingeckoTokens.find((token) => {
-          // Check by contract address first (most reliable)
-          if (token.platforms && token.platforms['polygon-pos']) {
-            return token.platforms['polygon-pos'].toLowerCase() === contractAddress.toLowerCase();
-          }
-          // Fallback to symbol matching
-          return token.symbol && token.symbol.toLowerCase() === symbol.toLowerCase();
-        });
+    // Known legitimate tokens on Polygon (even if not in CoinGecko)
+    const knownTokens = {
+      '0x8f3cf7ad23cd3cadbd9735aff958023239c6a063': 'DAI', // DAI Stablecoin
+      '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee': 'MATIC', // Native MATIC
+      '0x2791bca1f2de4661ed88a30c99a7a9449aa84174': 'USDC', // USDC
+      '0xc2132d05d31c914a87c6611c10748aeb04b58e8f': 'USDT', // USDT
+    };
 
-        if (token && token.id) {
-          tokenId = token.id;
-        } else {
-          // Try common token mappings for Polygon
-          const commonTokens = {
-            'usdc': 'usd-coin',
-            'usdt': 'tether',
-            'weth': 'weth',
-            'wbtc': 'wrapped-bitcoin',
-            'dai': 'dai',
-            'link': 'chainlink',
-            'uni': 'uniswap',
-            'aave': 'aave',
-            'sushi': 'sushi',
-            'crv': 'curve-dao-token',
-            'bal': 'balancer',
-            'comp': 'compound-governance-token'
-          };
-          
-          tokenId = commonTokens[symbol?.toLowerCase()];
-        }
-      }
+    // Check if it's a known legitimate token
+    if (knownTokens[contractAddress.toLowerCase()]) return true;
 
-      if (!tokenId) {
-        return null;
-      }
+    // Filter out obvious spam tokens
+    const spamIndicators = [
+      'claim',
+      'reward',
+      'airdrop',
+      'visit',
+      'redeem',
+      't.me',
+      't.ly',
+      'zerolends.com',
+      '5000usdc.org',
+      'eth-earn.net',
+      'web3eth.vip',
+      'adrp-ether.xyz',
+      'ethenaDrop.io',
+    ];
 
-      const options = {
-        method: 'GET',
-        headers: {
-          accept: 'application/json',
-          'x-cg-pro-api-key': process.env.NEXT_PUBLIC_COINGECKO_API_KEY,
-        },
-      };
+    const tokenText = `${symbol} ${name}`.toLowerCase();
+    const isSpam = spamIndicators.some((indicator) =>
+      tokenText.includes(indicator.toLowerCase())
+    );
 
-      let response = await fetch(
-        `https://pro-api.coingecko.com/api/v3/coins/${tokenId}`,
-        options
-      );
-
-      // If pro API fails, try free API
-      if (!response.ok) {
-        response = await fetch(
-          `https://api.coingecko.com/api/v3/coins/${tokenId}`,
-          { method: 'GET', headers: { accept: 'application/json' } }
-        );
-      }
-
-      if (response.ok) {
-        const data = await response.json();
-        return {
-          id: data.id,
-          symbol: data.symbol,
-          name: data.name,
-          image: data.image,
-          market_cap_rank: data.market_cap_rank,
-          description: data.description?.en,
-        };
-      }
-
-      return null;
-    } catch (error) {
-      console.error('Error fetching token details:', error);
-      return null;
-    }
-  };
-
-  // Fetch images for verified tokens
-  const fetchTokenImages = async (tokens) => {
-    const imageMap = {};
-    
-    for (const token of tokens) {
-      const details = await fetchTokenDetails(token.contract, token.symbol);
-      if (details && details.image) {
-        imageMap[token.contract || 'native'] = details.image;
-      }
-    }
-    
-    setTokenImages(imageMap);
+    // Return true only if not spam and has reasonable value
+    return !isSpam;
   };
 
   // Fetch token balances from The Graph Token API (Polygon/Matic)
@@ -263,10 +287,13 @@ export default function ProfilePage() {
         const data = await response.json();
         const tokens = data.data || [];
 
-        // Filter tokens based on Coingecko verification
-        const verifiedTokens = tokens.filter((token) =>
-          isTokenVerified(token.contract, token.symbol)
-        );
+        // Filter tokens based on CoinGecko verification and spam detection
+        const verifiedTokens = tokens.filter((token) => {
+          // Skip tokens with very low value (likely dust or spam)
+          if (token.value < 0.01) return false;
+
+          return isTokenVerified(token.contract, token.symbol, token.name);
+        });
 
         setTokenBalances(verifiedTokens);
 
@@ -308,17 +335,15 @@ export default function ProfilePage() {
         const data = await response.json();
         const historicalTokens = data.data || [];
 
-        // Filter historical tokens based on Coingecko verification
-        const verifiedHistoricalTokens = historicalTokens.filter((token) =>
-          isTokenVerified(token.contract, token.symbol)
-        );
+        // Filter historical tokens based on CoinGecko verification and spam detection
+        const verifiedHistoricalTokens = historicalTokens.filter((token) => {
+          // Skip tokens with very low value (likely dust or spam)
+          if (token.value < 0.01) return false;
+
+          return isTokenVerified(token.contract, token.symbol, token.name);
+        });
 
         setHistoricalTokenData(verifiedHistoricalTokens);
-
-        // Fetch images for verified historical tokens only
-        if (verifiedHistoricalTokens.length > 0) {
-          await fetchTokenImages(verifiedHistoricalTokens);
-        }
       } else {
         console.error('Error fetching historical token data:', response.status);
         setHistoricalTokenData([]);
@@ -381,9 +406,6 @@ export default function ProfilePage() {
 
       await Promise.all(metadataPromises);
       setTokenMetadata(metadataMap);
-
-      // Fetch token images from CoinGecko
-      await fetchTokenImages(tokens);
     } catch (error) {
       console.error('Error fetching all token metadata:', error);
     } finally {
@@ -471,96 +493,6 @@ export default function ProfilePage() {
     setSurveyData((prev) => ({ ...prev, riskProfile: profile }));
   };
 
-  const handleUsageIntentChange = (intent) => {
-    setSurveyData((prev) => ({ ...prev, usageIntent: intent }));
-  };
-
-  // Mock user data
-  const userData = {
-    name: 'Nuru Tan',
-    username: '@nurudan',
-    email: 'nuru.tan@email.com',
-    phone: '+65 8123 4567',
-    location: 'Singapore',
-    joinDate: 'March 2023',
-    avatar: '/api/placeholder/100/100',
-    tier: 'Premium',
-    accuracy: 87.3,
-    totalVolume: 245000,
-    activePositions: 12,
-    totalTrades: 156,
-  };
-
-  const recentTrades = [
-    {
-      id: 1,
-      market: 'Bitcoin to reach $100k by 2024',
-      position: 'YES',
-      amount: '1,200',
-      probability: '68%',
-      pnl: '+340',
-      status: 'active',
-      date: '2 days ago',
-    },
-    {
-      id: 2,
-      market: 'Tesla Stock Price Above $300',
-      position: 'NO',
-      amount: '800',
-      probability: '72%',
-      pnl: '-120',
-      status: 'active',
-      date: '1 week ago',
-    },
-    {
-      id: 3,
-      market: 'AI will pass Turing Test in 2024',
-      position: 'YES',
-      amount: '500',
-      probability: '34%',
-      pnl: '+85',
-      status: 'closed',
-      date: '2 weeks ago',
-    },
-    {
-      id: 4,
-      market: 'US Election 2024 Winner',
-      position: 'YES',
-      amount: '2,000',
-      probability: '45%',
-      pnl: '+420',
-      status: 'active',
-      date: '3 weeks ago',
-    },
-  ];
-
-  const achievements = [
-    {
-      title: 'Early Adopter',
-      description: 'Joined in the first quarter',
-      icon: IconAward,
-      color: 'text-blue-500',
-    },
-    {
-      title: 'Accuracy Expert',
-      description: 'Maintained 85%+ accuracy',
-      icon: IconTarget,
-      color: 'text-green-500',
-    },
-    {
-      title: 'Volume Trader',
-      description: 'Traded over $200K volume',
-      icon: IconChartBar,
-      color: 'text-purple-500',
-    },
-    {
-      title: 'Market Leader',
-      description: 'Top 100 on leaderboard',
-      icon: IconStar,
-      color: 'text-yellow-500',
-    },
-  ];
-
   const TabButton = ({ id, label, isActive, onClick }) => (
     <button
       onClick={() => onClick(id)}
@@ -595,8 +527,12 @@ export default function ProfilePage() {
           <div className="lg:col-span-1">
             <Card className="mb-6">
               <CardContent className="p-6 text-center">
-                <div className="w-24 h-24 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <IconUser className="h-12 w-12 text-white" />
+                <div className="w-24 h-24 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden">
+                  <img
+                    src="https://static.vecteezy.com/system/resources/previews/005/356/906/non_2x/funny-cartoon-squirrel-free-vector.jpg"
+                    alt="Profile"
+                    className="w-full h-full object-cover rounded-full"
+                  />
                 </div>
                 <h2 className="text-xl font-bold text-neutral-900 dark:text-neutral-100 mb-1">
                   {userData.name}
@@ -630,7 +566,7 @@ export default function ProfilePage() {
                   </span>
                   <span className="font-semibold flex items-center">
                     <img src="/usdc.png" alt="USDC" className="w-3 h-3 mr-1" />
-                    {userData.totalVolume.toLocaleString()}
+                    {userData.totalVolume?.toLocaleString() || '0'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -638,14 +574,16 @@ export default function ProfilePage() {
                     Active Positions
                   </span>
                   <span className="font-semibold text-orange-500">
-                    {userData.activePositions}
+                    {openPositions.length || 0}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-neutral-600 dark:text-neutral-400">
-                    Total Trades
+                    Total Positions
                   </span>
-                  <span className="font-semibold">{userData.totalTrades}</span>
+                  <span className="font-semibold">
+                    {userData.totalPositions || 0}
+                  </span>
                 </div>
               </CardContent>
             </Card>
@@ -673,12 +611,6 @@ export default function ProfilePage() {
                 isActive={activeTab === 'preferences'}
                 onClick={setActiveTab}
               />
-              <TabButton
-                id="settings"
-                label="Account Settings"
-                isActive={activeTab === 'settings'}
-                onClick={setActiveTab}
-              />
             </div>
 
             {/* Tab Content */}
@@ -699,10 +631,10 @@ export default function ProfilePage() {
                               alt="USDC"
                               className="w-5 h-5 mr-1"
                             />
-                            4,520
+                            {userData.totalPnl?.toLocaleString() || '0'}
                           </p>
                           <p className="text-green-200 text-xs">
-                            +18.5% this month
+                            {userData.totalPnl >= 0 ? 'Profitable' : 'Loss'}
                           </p>
                         </div>
                         <IconTrendingUp className="h-8 w-8 text-green-100" />
@@ -717,8 +649,14 @@ export default function ProfilePage() {
                           <p className="text-blue-100 text-xs font-medium">
                             Win Rate
                           </p>
-                          <p className="text-2xl font-bold">73.2%</p>
-                          <p className="text-blue-200 text-xs">Above average</p>
+                          <p className="text-2xl font-bold">
+                            {userData.winRate?.toFixed(1) || '0'}%
+                          </p>
+                          <p className="text-blue-200 text-xs">
+                            {userData.winRate > 50
+                              ? 'Above average'
+                              : 'Below average'}
+                          </p>
                         </div>
                         <IconTarget className="h-8 w-8 text-blue-100" />
                       </div>
@@ -738,10 +676,10 @@ export default function ProfilePage() {
                               alt="USDC"
                               className="w-5 h-5 mr-1"
                             />
-                            1,245
+                            {userData.avgPositionSize?.toLocaleString() || '0'}
                           </p>
                           <p className="text-purple-200 text-xs">
-                            Risk managed
+                            Per position
                           </p>
                         </div>
                         <IconCoin className="h-8 w-8 text-purple-100" />
@@ -754,11 +692,13 @@ export default function ProfilePage() {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-orange-100 text-xs font-medium">
-                            Streak
+                            Total Positions
                           </p>
-                          <p className="text-2xl font-bold">7 wins</p>
+                          <p className="text-2xl font-bold">
+                            {userData.totalPositions || 0}
+                          </p>
                           <p className="text-orange-200 text-xs">
-                            Current streak
+                            {openPositions.length || 0} active
                           </p>
                         </div>
                         <IconChartBar className="h-8 w-8 text-orange-100" />
@@ -766,38 +706,6 @@ export default function ProfilePage() {
                     </CardContent>
                   </Card>
                 </div>
-
-                {/* Achievements */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Achievements</CardTitle>
-                    <CardDescription>
-                      Your milestones and accomplishments
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {achievements.map((achievement, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center space-x-3 p-3 bg-neutral-50 dark:bg-neutral-800 rounded-lg"
-                        >
-                          <achievement.icon
-                            className={cn('h-8 w-8', achievement.color)}
-                          />
-                          <div>
-                            <h4 className="font-medium text-neutral-900 dark:text-neutral-100">
-                              {achievement.title}
-                            </h4>
-                            <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                              {achievement.description}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
 
                 {/* Token Balances */}
                 <Card>
@@ -813,7 +721,7 @@ export default function ProfilePage() {
                     </CardTitle>
                     <CardDescription>
                       Your current token holdings on Polygon network • Powered
-                      by The Graph Token API • Images & Verification by CoinGecko
+                      by The Graph Token API • Verified by CoinGecko
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -854,7 +762,6 @@ export default function ProfilePage() {
                       <div className="space-y-3">
                         {tokenBalances.map((token, index) => {
                           const metadata = tokenMetadata[token.contract];
-                          const tokenImage = tokenImages[token.contract || 'native'];
                           return (
                             <div
                               key={index}
@@ -862,25 +769,33 @@ export default function ProfilePage() {
                             >
                               <div className="flex items-center space-x-3">
                                 <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center overflow-hidden">
-                                  {tokenImage?.large ? (
-                                    <img
-                                      src={tokenImage.large}
-                                      alt={token.symbol}
-                                      className="w-12 h-12 rounded-full object-cover"
-                                      onError={(e) => {
-                                        e.target.style.display = 'none';
-                                        e.target.nextSibling.style.display = 'flex';
-                                      }}
-                                    />
-                                  ) : null}
-                                  <span 
-                                    className="text-white font-bold text-sm flex items-center justify-center w-full h-full"
-                                    style={{
-                                      display: tokenImage?.large ? 'none' : 'flex'
-                                    }}
-                                  >
-                                    {token.symbol?.slice(0, 2) || '??'}
-                                  </span>
+                                  {(() => {
+                                    const tokenImage = getTokenImage(
+                                      token.contract,
+                                      token.symbol,
+                                      metadata
+                                    );
+                                    if (tokenImage) {
+                                      return (
+                                        <img
+                                          src={tokenImage}
+                                          alt={metadata?.symbol || token.symbol}
+                                          className="w-full h-full object-cover rounded-full"
+                                          onError={(e) => {
+                                            e.target.style.display = 'none';
+                                            e.target.nextSibling.style.display =
+                                              'flex';
+                                          }}
+                                        />
+                                      );
+                                    } else {
+                                      return (
+                                        <span className="text-white font-bold text-sm flex items-center justify-center w-full h-full">
+                                          {token.symbol?.slice(0, 2) || '??'}
+                                        </span>
+                                      );
+                                    }
+                                  })()}
                                 </div>
                                 <div>
                                   <h4 className="font-medium text-neutral-900 dark:text-neutral-100 flex items-center space-x-2">
@@ -997,7 +912,7 @@ export default function ProfilePage() {
                     </CardTitle>
                     <CardDescription>
                       Historical token balance changes on Polygon network •
-                      Powered by The Graph Token API • Images & Verification by CoinGecko
+                      Powered by The Graph Token API • Verified by CoinGecko
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -1034,7 +949,6 @@ export default function ProfilePage() {
                       <div className="space-y-3">
                         {historicalTokenData.map((token, index) => {
                           const metadata = tokenMetadata[token.contract];
-                          const tokenImage = tokenImages[token.contract || 'native'];
                           return (
                             <div
                               key={index}
@@ -1042,21 +956,24 @@ export default function ProfilePage() {
                             >
                               <div className="flex items-center space-x-3">
                                 <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center overflow-hidden">
-                                  {tokenImage?.large ? (
+                                  {metadata?.image ? (
                                     <img
-                                      src={tokenImage.large}
-                                      alt={token.symbol}
-                                      className="w-12 h-12 rounded-full object-cover"
+                                      src={metadata.image}
+                                      alt={metadata.symbol || token.symbol}
+                                      className="w-full h-full object-cover rounded-full"
                                       onError={(e) => {
                                         e.target.style.display = 'none';
-                                        e.target.nextSibling.style.display = 'flex';
+                                        e.target.nextSibling.style.display =
+                                          'flex';
                                       }}
                                     />
                                   ) : null}
-                                  <span 
+                                  <span
                                     className="text-white font-bold text-sm flex items-center justify-center w-full h-full"
                                     style={{
-                                      display: tokenImage?.large ? 'none' : 'flex'
+                                      display: metadata?.image
+                                        ? 'none'
+                                        : 'flex',
                                     }}
                                   >
                                     {token.symbol?.slice(0, 2) || '??'}
@@ -1150,70 +1067,150 @@ export default function ProfilePage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {recentTrades.map((trade) => (
-                      <div
-                        key={trade.id}
-                        className="flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-800 rounded-lg"
-                      >
-                        <div className="flex-1">
-                          <h4 className="font-medium text-neutral-900 dark:text-neutral-100 mb-1">
-                            {trade.market}
-                          </h4>
-                          <div className="flex items-center space-x-4 text-sm text-neutral-500 dark:text-neutral-400">
-                            <span
-                              className={cn(
-                                'px-2 py-1 rounded text-xs font-medium',
-                                trade.position === 'YES'
-                                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                                  : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                              )}
-                            >
-                              {trade.position}
-                            </span>
-                            <span className="flex items-center">
-                              <img
-                                src="/usdc.png"
-                                alt="USDC"
-                                className="w-3 h-3 mr-1"
-                              />
-                              {trade.amount}
-                            </span>
-                            <span>{trade.probability}</span>
-                            <span>{trade.date}</span>
+                  {loading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                      <span className="ml-2">Loading trading history...</span>
+                    </div>
+                  ) : error ? (
+                    <div className="text-center py-8">
+                      <p className="text-red-500">
+                        Error loading trades: {error}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {/* Open Positions */}
+                      {openPositions.length > 0 && (
+                        <div>
+                          <h3 className="text-lg font-semibold mb-3 flex items-center">
+                            <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                            Active Positions ({openPositions.length})
+                          </h3>
+                          <div className="space-y-3">
+                            {openPositions.map((position, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-800 rounded-lg border-l-4 border-green-500"
+                              >
+                                <div className="flex-1">
+                                  <h4 className="font-medium text-neutral-900 dark:text-neutral-100 mb-1">
+                                    {position.market || 'Market Position'}
+                                  </h4>
+                                  <div className="flex items-center space-x-4 text-sm text-neutral-500 dark:text-neutral-400">
+                                    <span className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-2 py-1 rounded text-xs font-medium">
+                                      ACTIVE
+                                    </span>
+                                    <span className="flex items-center">
+                                      <img
+                                        src="/usdc.png"
+                                        alt="USDC"
+                                        className="w-3 h-3 mr-1"
+                                      />
+                                      {position.amount?.toLocaleString() ||
+                                        'N/A'}
+                                    </span>
+                                    <span>
+                                      Token: {position.outcomeToken || 'N/A'}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-lg font-semibold text-blue-500">
+                                    Active
+                                  </div>
+                                  <Badge variant="default" className="text-xs">
+                                    Open
+                                  </Badge>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div
-                            className={cn(
-                              'text-lg font-semibold flex items-center',
-                              trade.pnl.startsWith('+')
-                                ? 'text-green-500'
-                                : 'text-red-500'
-                            )}
-                          >
-                            {trade.pnl.startsWith('+') ? '+' : '-'}
-                            <img
-                              src="/usdc.png"
-                              alt="USDC"
-                              className="w-4 h-4 mx-1"
-                            />
-                            {trade.pnl.substring(1)}
+                      )}
+
+                      {/* Historical Positions */}
+                      {historicalPositions.length > 0 && (
+                        <div>
+                          <h3 className="text-lg font-semibold mb-3 flex items-center">
+                            <div className="w-2 h-2 bg-gray-500 rounded-full mr-2"></div>
+                            Trading History ({historicalPositions.length})
+                          </h3>
+                          <div className="space-y-3">
+                            {historicalPositions
+                              .slice(0, 10)
+                              .map((position, index) => (
+                                <div
+                                  key={index}
+                                  className="flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-800 rounded-lg"
+                                >
+                                  <div className="flex-1">
+                                    <h4 className="font-medium text-neutral-900 dark:text-neutral-100 mb-1">
+                                      {position.market || 'Historical Position'}
+                                    </h4>
+                                    <div className="flex items-center space-x-4 text-sm text-neutral-500 dark:text-neutral-400">
+                                      <span className="bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200 px-2 py-1 rounded text-xs font-medium">
+                                        CLOSED
+                                      </span>
+                                      <span className="flex items-center">
+                                        <img
+                                          src="/usdc.png"
+                                          alt="USDC"
+                                          className="w-3 h-3 mr-1"
+                                        />
+                                        {position.amount?.toLocaleString() ||
+                                          'N/A'}
+                                      </span>
+                                      <span>
+                                        Token: {position.outcomeToken || 'N/A'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div
+                                      className={cn(
+                                        'text-lg font-semibold flex items-center',
+                                        position.pnl >= 0
+                                          ? 'text-green-500'
+                                          : 'text-red-500'
+                                      )}
+                                    >
+                                      {position.pnl >= 0 ? '+' : ''}
+                                      <img
+                                        src="/usdc.png"
+                                        alt="USDC"
+                                        className="w-4 h-4 mx-1"
+                                      />
+                                      {Math.abs(
+                                        position.pnl || 0
+                                      ).toLocaleString()}
+                                    </div>
+                                    <Badge
+                                      variant="secondary"
+                                      className="text-xs"
+                                    >
+                                      Closed
+                                    </Badge>
+                                  </div>
+                                </div>
+                              ))}
                           </div>
-                          <Badge
-                            variant={
-                              trade.status === 'active'
-                                ? 'default'
-                                : 'secondary'
-                            }
-                            className="text-xs"
-                          >
-                            {trade.status}
-                          </Badge>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      )}
+
+                      {openPositions.length === 0 &&
+                        historicalPositions.length === 0 && (
+                          <div className="text-center py-8">
+                            <p className="text-neutral-500">
+                              No trading history found for this wallet
+                            </p>
+                            <p className="text-sm text-neutral-400 mt-2">
+                              Start trading to see your positions here
+                            </p>
+                          </div>
+                        )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -1450,119 +1447,6 @@ export default function ProfilePage() {
                             : 'Not selected'}
                         </span>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-
-            {activeTab === 'settings' && (
-              <div className="space-y-6">
-                {/* Personal Information */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <IconUser className="h-5 w-5" />
-                      <span>Personal Information</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                          Full Name
-                        </label>
-                        <div className="mt-1 flex items-center space-x-2">
-                          <span className="text-neutral-900 dark:text-neutral-100">
-                            {userData.name}
-                          </span>
-                          <IconEdit className="h-4 w-4 text-neutral-400 cursor-pointer hover:text-neutral-600" />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                          Email
-                        </label>
-                        <div className="mt-1 flex items-center space-x-2">
-                          <span className="text-neutral-900 dark:text-neutral-100">
-                            {userData.email}
-                          </span>
-                          <IconEdit className="h-4 w-4 text-neutral-400 cursor-pointer hover:text-neutral-600" />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                          Phone
-                        </label>
-                        <div className="mt-1 flex items-center space-x-2">
-                          <span className="text-neutral-900 dark:text-neutral-100">
-                            {userData.phone}
-                          </span>
-                          <IconEdit className="h-4 w-4 text-neutral-400 cursor-pointer hover:text-neutral-600" />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                          Location
-                        </label>
-                        <div className="mt-1 flex items-center space-x-2">
-                          <span className="text-neutral-900 dark:text-neutral-100">
-                            {userData.location}
-                          </span>
-                          <IconEdit className="h-4 w-4 text-neutral-400 cursor-pointer hover:text-neutral-600" />
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Account Settings */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <IconSettings className="h-5 w-5" />
-                      <span>Account Settings</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-medium text-neutral-900 dark:text-neutral-100">
-                          Email Notifications
-                        </h4>
-                        <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                          Receive updates about your trades
-                        </p>
-                      </div>
-                      <Button variant="outline" size="sm">
-                        Configure
-                      </Button>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-medium text-neutral-900 dark:text-neutral-100">
-                          Two-Factor Authentication
-                        </h4>
-                        <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                          Secure your account with 2FA
-                        </p>
-                      </div>
-                      <Button variant="outline" size="sm">
-                        Enable
-                      </Button>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-medium text-neutral-900 dark:text-neutral-100">
-                          API Access
-                        </h4>
-                        <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                          Manage your API keys
-                        </p>
-                      </div>
-                      <Button variant="outline" size="sm">
-                        Manage
-                      </Button>
                     </div>
                   </CardContent>
                 </Card>
