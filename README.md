@@ -1,36 +1,113 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# 📊 Nooroofi - Polymarket Analytics Platform
 
-## Getting Started
+A comprehensive analytics and tracking platform for Polymarket prediction markets that combines The Graph Protocol infrastructure with real-time market data to provide traders and researchers with powerful market intelligence tools.
 
-First, run the development server:
+## 🎯 What This Project Is About
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+This platform solves the challenge of accessing and analyzing prediction market data by providing:
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **Real-time market discovery** - Find the newest and most active Polymarket prediction markets
+- **User position tracking** - Analyze any trader's portfolio and performance across all markets
+- **Market intelligence** - Get insights on volume, liquidity, trends, and trading patterns
+- **Unified data access** - Combines on-chain data from The Graph with market metadata from Polymarket APIs
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+Built with Next.js and integrating multiple data sources, it serves traders, researchers, and developers who need structured access to prediction market data.
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+---
 
-## Learn More
+## 🔗 The Graph Protocol Integration
 
-To learn more about Next.js, take a look at the following resources:
+### 📈 **The Graph Subgraph**
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Repository**: [`nooroofi-subgraphs`](https://github.com/ShaunLim08/nooroofi-subgraphs)
+- **Primary Endpoint**: `https://gateway.thegraph.com/api/subgraphs/id/6c58N5U4MtQE2Y8njfVrrAfRykzfqajMGeTMEvMmskVz`
+- **Alternative Endpoint**: `https://api.goldsky.com/api/public/project_cl6mb8i9h0003e201j6li0diw/subgraphs/orderbook-subgraph/0.0.1/gn`
+- **Purpose**: Queries on-chain Polymarket data including user positions, trading activity, and market events
+- **Location in code**:
+  - [`src/services/NewestMarketsFixed.js`](src/services/NewestMarketsFixed.js) - Main market data service
+  - [`src/services/TrendingMarketData.js`](src/services/TrendingMarketData.js) - Trending market analysis
+- **Key Queries**:
+  ```graphql
+  userPositions(orderBy: realizedPnl, orderDirection: desc)
+  conditionPreparations(orderBy: timestamp, orderDirection: desc)
+  ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+### 🌊 **The Graph Substream**
 
-## Deploy on Vercel
+- **Repository**: [`nooroofi-substream`](https://github.com/ShaunLim08/nooroofi-substream)
+- **Purpose**: Real-time streaming of Polymarket events for live updates
+- **Features**:
+  - Live market creation notifications
+  - Real-time trading activity feeds
+  - Event-driven market updates
+- **Integration**: Processes blockchain events in real-time to feed the subgraph with the latest data
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 🔌 **The Graph Token API**
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+- **Implementation**: Direct token ID queries to Polymarket's REST API
+- **Data Flow**: Token IDs extracted from subgraph queries → Used to fetch detailed market data via `/api/polymarket` proxy endpoint
+- **Location**: [`src/app/api/polymarket/route.js`](src/app/api/polymarket/route.js) - CORS proxy for Polymarket API calls
+
+---
+
+## 📦 Smart Contract Integration
+
+### 🔗 **Smart Contracts Repository**
+
+- **Repository**: [`nooroofi-contracts`](https://github.com/ShaunLim08/nooroofi-contracts)
+- **Deployed Sepolia Contract**: [`0x81dc5f9ce084ad3d3e0feb4f3f1956463eeaf12c`](https://sepolia.etherscan.io/address/0x81dc5f9ce084ad3d3e0feb4f3f1956463eeaf12c)
+- **Network**: Sepolia Testnet
+- **Purpose**: Smart contracts for enhanced prediction market functionality
+- **Integration**: Contract interactions handled through subgraph queries and direct blockchain calls
+
+## 🚀 **Getting Started**
+
+### Prerequisites
+
+- Node.js 18+
+- npm or yarn
+- Git
+
+### Installation
+
+1. **Clone the repository**
+
+   ```bash
+   git clone https://github.com/ShaunLim08/nooroofi-devmatch.git
+   cd nooroofi-devmatch
+   ```
+
+2. **Install dependencies**
+
+   ```bash
+   npm install
+   ```
+
+3. **Set up environment variables**
+
+   ```bash
+   cp .env.example .env.local
+   # Edit .env.local with your API keys
+   ```
+
+4. **Start development server**
+
+   ```bash
+   npm run dev
+   ```
+
+5. **Access the application**
+   - Open [http://localhost:3000](http://localhost:3000) in your browser
+
+---
+
+## 🔗 **Related Repositories**
+
+| Repository                                                               | Purpose                                         | Status    |
+| ------------------------------------------------------------------------ | ----------------------------------------------- | --------- |
+| [`nooroofi-subgraphs`](https://github.com/ShaunLim08/nooroofi-subgraphs) | The Graph subgraph for indexing Polymarket data | ✅ Active |
+| [`nooroofi-substream`](https://github.com/ShaunLim08/nooroofi-substream) | Real-time data streaming from blockchain        | ✅ Active |
+| [`nooroofi-contracts`](https://github.com/ShaunLim08/nooroofi-contracts) | Smart contracts for enhanced functionality      | ✅ Active |
+| `nooroofi-devmatch`                                                      | Frontend application (this repo)                | ✅ Active |
+
+---
