@@ -601,7 +601,7 @@ export default function ProfilePage() {
               />
               <TabButton
                 id="trades"
-                label="Trading History"
+                label="Copy Trades"
                 isActive={activeTab === 'trades'}
                 onClick={setActiveTab}
               />
@@ -712,7 +712,7 @@ export default function ProfilePage() {
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
                       <IconWallet className="h-5 w-5 text-purple-500" />
-                      <span>Polygon Token Balances</span>
+                      <span>Wallet Balances</span>
                       <img
                         src="/thegraph.png"
                         alt="The Graph"
@@ -898,156 +898,6 @@ export default function ProfilePage() {
                   </CardContent>
                 </Card>
 
-                {/* Historical Token Data */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <IconHistory className="h-5 w-5 text-blue-500" />
-                      <span>Historical Token Data</span>
-                      <img
-                        src="/thegraph.png"
-                        alt="The Graph"
-                        className="h-4 w-4"
-                      />
-                    </CardTitle>
-                    <CardDescription>
-                      Historical token balance changes on Polygon network •
-                      Powered by The Graph Token API • Verified by CoinGecko
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {!walletAddress ? (
-                      <div className="text-center py-8">
-                        <IconHistory className="h-12 w-12 text-neutral-400 mx-auto mb-4" />
-                        <p className="text-neutral-600 dark:text-neutral-400">
-                          Connect your wallet to view historical data
-                        </p>
-                      </div>
-                    ) : loadingHistorical ? (
-                      <div className="text-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-                        <p className="text-neutral-600 dark:text-neutral-400">
-                          Loading historical token data...
-                        </p>
-                      </div>
-                    ) : historicalTokenData.length === 0 ? (
-                      <div className="text-center py-8">
-                        <IconHistory className="h-12 w-12 text-neutral-400 mx-auto mb-4" />
-                        <p className="text-neutral-600 dark:text-neutral-400">
-                          No verified historical token data found
-                        </p>
-                        <p className="text-sm text-neutral-500 dark:text-neutral-500 mt-2">
-                          Only showing tokens verified by CoinGecko to prevent
-                          scam tokens
-                        </p>
-                        <p className="text-sm text-neutral-500 dark:text-neutral-500">
-                          Address: {walletAddress?.slice(0, 6)}...
-                          {walletAddress?.slice(-4)}
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {historicalTokenData.map((token, index) => {
-                          const metadata = tokenMetadata[token.contract];
-                          return (
-                            <div
-                              key={index}
-                              className="flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-800 rounded-lg"
-                            >
-                              <div className="flex items-center space-x-3">
-                                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center overflow-hidden">
-                                  {metadata?.image ? (
-                                    <img
-                                      src={metadata.image}
-                                      alt={metadata.symbol || token.symbol}
-                                      className="w-full h-full object-cover rounded-full"
-                                      onError={(e) => {
-                                        e.target.style.display = 'none';
-                                        e.target.nextSibling.style.display =
-                                          'flex';
-                                      }}
-                                    />
-                                  ) : null}
-                                  <span
-                                    className="text-white font-bold text-sm flex items-center justify-center w-full h-full"
-                                    style={{
-                                      display: metadata?.image
-                                        ? 'none'
-                                        : 'flex',
-                                    }}
-                                  >
-                                    {token.symbol?.slice(0, 2) || '??'}
-                                  </span>
-                                </div>
-                                <div>
-                                  <h4 className="font-medium text-neutral-900 dark:text-neutral-100 flex items-center space-x-2">
-                                    <span>
-                                      {metadata?.name ||
-                                        token.name ||
-                                        'Unknown Token'}
-                                    </span>
-                                    <div
-                                      className="w-2 h-2 bg-green-500 rounded-full"
-                                      title="Verified by CoinGecko"
-                                    ></div>
-                                  </h4>
-                                  <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                                    {metadata?.symbol || token.symbol} •{' '}
-                                    {new Date(
-                                      token.datetime
-                                    ).toLocaleDateString()}{' '}
-                                    • Verified
-                                  </p>
-                                  {metadata && (
-                                    <div className="text-xs text-neutral-400 mt-1">
-                                      Decimals: {metadata.decimals} • Holders:{' '}
-                                      {metadata.holders?.toLocaleString() ||
-                                        'N/A'}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <div className="grid grid-cols-2 gap-2 text-xs">
-                                  <div>
-                                    <span className="text-neutral-500">
-                                      Open:
-                                    </span>
-                                    <span className="ml-1 font-medium">
-                                      {token.open}
-                                    </span>
-                                  </div>
-                                  <div>
-                                    <span className="text-neutral-500">
-                                      Close:
-                                    </span>
-                                    <span className="ml-1 font-medium">
-                                      {token.close}
-                                    </span>
-                                  </div>
-                                  <div>
-                                    <span className="text-green-500">
-                                      High:
-                                    </span>
-                                    <span className="ml-1 font-medium">
-                                      {token.high}
-                                    </span>
-                                  </div>
-                                  <div>
-                                    <span className="text-red-500">Low:</span>
-                                    <span className="ml-1 font-medium">
-                                      {token.low}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
               </div>
             )}
 
@@ -1060,10 +910,10 @@ export default function ProfilePage() {
                       alt="The Graph"
                       className="h-5 w-5"
                     />
-                    <span>Trading History</span>
+                    <span>Open Positons</span>
                   </CardTitle>
                   <CardDescription>
-                    Your recent prediction market trades • Powered by The Graph
+                    Your recent prediction market copy trades • Powered by The Graph
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -1129,20 +979,20 @@ export default function ProfilePage() {
                         </div>
                       )}
 
-                      {/* Historical Positions */}
-                      {historicalPositions.length > 0 && (
+                      {/* Historical Positions
+                      {historicalPositions.length > 0 && ( */}
                         <div>
-                          <h3 className="text-lg font-semibold mb-3 flex items-center">
+                          {/* <h3 className="text-lg font-semibold mb-3 flex items-center">
                             <div className="w-2 h-2 bg-gray-500 rounded-full mr-2"></div>
                             Trading History ({historicalPositions.length})
-                          </h3>
+                          </h3> */}
                           <div className="space-y-3">
                             {historicalPositions
                               .slice(0, 10)
                               .map((position, index) => (
                                 <div
                                   key={index}
-                                  className="flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-800 rounded-lg"
+                                  className="flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-800 rounded-lg border-l-4 border-gray-400"
                                 >
                                   <div className="flex-1">
                                     <h4 className="font-medium text-neutral-900 dark:text-neutral-100 mb-1">
@@ -1164,6 +1014,13 @@ export default function ProfilePage() {
                                       <span>
                                         Token: {position.outcomeToken || 'N/A'}
                                       </span>
+                                      <span className="flex items-center">
+                                        <IconCalendar className="w-3 h-3 mr-1" />
+                                        {position.timestamp ? 
+                                          new Date(position.timestamp * 1000).toLocaleDateString() : 
+                                          'N/A'
+                                        }
+                                      </span>
                                     </div>
                                   </div>
                                   <div className="text-right">
@@ -1175,6 +1032,11 @@ export default function ProfilePage() {
                                           : 'text-red-500'
                                       )}
                                     >
+                                      {position.pnl >= 0 ? (
+                                        <IconTrendingUp className="w-4 h-4 mr-1" />
+                                      ) : (
+                                        <IconTrendingDown className="w-4 h-4 mr-1" />
+                                      )}
                                       {position.pnl >= 0 ? '+' : ''}
                                       <img
                                         src="/usdc.png"
@@ -1185,18 +1047,44 @@ export default function ProfilePage() {
                                         position.pnl || 0
                                       ).toLocaleString()}
                                     </div>
-                                    <Badge
-                                      variant="secondary"
-                                      className="text-xs"
-                                    >
-                                      Closed
-                                    </Badge>
+                                    <div className="flex items-center space-x-2 mt-1">
+                                      <Badge
+                                        variant={position.pnl >= 0 ? "default" : "destructive"}
+                                        className="text-xs"
+                                      >
+                                        {position.pnl >= 0 ? 'Profitable' : 'Loss'}
+                                      </Badge>
+                                      <Badge
+                                        variant="outline"
+                                        className="text-xs"
+                                      >
+                                        Closed
+                                      </Badge>
+                                    </div>
                                   </div>
                                 </div>
                               ))}
                           </div>
+                          
+                          {/* Show More Button if there are more than 10 positions */}
+                          {historicalPositions.length > 10 && (
+                            <div className="text-center mt-4">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-sm"
+                                onClick={() => {
+                                  // You can implement a show more functionality here
+                                  console.log('Show more historical positions');
+                                }}
+                              >
+                                <IconHistory className="w-4 h-4 mr-2" />
+                                View All {historicalPositions.length} Positions
+                              </Button>
+                            </div>
+                          )}
                         </div>
-                      )}
+                      {/* )} */}
 
                       {openPositions.length === 0 &&
                         historicalPositions.length === 0 && (
