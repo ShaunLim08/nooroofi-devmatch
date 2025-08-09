@@ -79,37 +79,68 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-white dark:from-gray-900 dark:to-gray-800 pt-32">
+    <div className="min-h-screen bg-white dark:from-gray-900 dark:to-gray-800 pt-16">
       {/* Welcome Section */}
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-2">
+        {/* Big NoorooFi Logo */}
+        <div className="text-center mb-8">
+          <img
+            src="/NoorooFi.png"
+            alt="NoorooFi"
+            className="h-48 w-auto mx-auto"
+          />
+        </div>
+
         <Card className="mb-8 bg-gradient-to-r from-orange-500 to-orange-600 text-white border-0">
           <CardContent className="p-8">
-            <div className="text-center space-y-4">
-              <h1 className="text-4xl font-bold">Welcome to NoorooFi</h1>
-              <p className="text-xl opacity-90">
-                Prediction Market Aggregator, Analytics Dashboard & Scanner with
-                AI
-              </p>
-              <p className="text-lg opacity-80 flex items-center justify-center">
-                Powered by{' '}
+            <div className="flex items-center justify-between">
+              {/* Left Squirrel */}
+              <div className="flex-shrink-0">
                 <img
-                  src="/thegraph.png"
-                  alt="The Graph"
-                  className="h-5 w-5 mx-2"
+                  src="/squirrel.png"
+                  alt="Squirrel"
+                  className="h-48 w-48 opacity-95"
                 />
-                <span className="font-semibold">The Graph </span> protocol for
-                decentralized data indexing
-              </p>
-              <div className="flex justify-center space-x-4 mt-6">
-                <Badge variant="secondary" className="text-orange-600">
-                  Real-time Analytics
-                </Badge>
-                <Badge variant="secondary" className="text-orange-600">
-                  AI-Powered Insights
-                </Badge>
-                <Badge variant="secondary" className="text-orange-600">
-                  Multi-Platform Aggregation
-                </Badge>
+              </div>
+
+              {/* Center Content */}
+              <div className="text-center space-y-4 flex-1 px-8">
+                <h1 className="text-4xl font-bold">Welcome to NoorooFi</h1>
+                <p className="text-xl opacity-90">
+                  Prediction Market Aggregator, Analytics Dashboard & Scanner
+                  with AI
+                </p>
+                <p className="text-lg opacity-80 flex items-center justify-center">
+                  Powered by{' '}
+                  <img
+                    src="/thegraph.png"
+                    alt="The Graph"
+                    className="h-5 w-5 mx-2"
+                  />
+                  <span className="font-semibold">
+                    The Graph protocol for decentralized data indexing
+                  </span>
+                </p>
+                <div className="flex justify-center space-x-4 mt-6">
+                  <Badge variant="secondary" className="text-orange-600">
+                    Real-time Analytics
+                  </Badge>
+                  <Badge variant="secondary" className="text-orange-600">
+                    Alpha Copy Trading
+                  </Badge>
+                  <Badge variant="secondary" className="text-orange-600">
+                    Nuru Massages
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Right Squirrel */}
+              <div className="flex-shrink-0">
+                <img
+                  src="/squirrel.png"
+                  alt="Squirrel"
+                  className="h-48 w-48 opacity-95"
+                />
               </div>
             </div>
           </CardContent>

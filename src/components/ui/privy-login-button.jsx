@@ -15,14 +15,8 @@ import {
 import { cn } from '@/lib/utils';
 
 export default function PrivyLoginButton() {
-  const { 
-    ready, 
-    authenticated, 
-    user, 
-    login, 
-    logout 
-  } = usePrivy();
-  
+  const { ready, authenticated, user, login, logout } = usePrivy();
+
   const { sendCode, loginWithCode } = useLoginWithEmail();
   const [showEmailLogin, setShowEmailLogin] = useState(false);
   const [email, setEmail] = useState('');
@@ -54,12 +48,16 @@ export default function PrivyLoginButton() {
             </p>
             {user.wallet && (
               <p className="text-xs text-orange-600 dark:text-orange-400 font-mono">
-                {user.wallet.address.slice(0, 6)}...{user.wallet.address.slice(-4)}
+                {user.wallet.address.slice(0, 6)}...
+                {user.wallet.address.slice(-4)}
               </p>
             )}
           </div>
           {user.wallet && (
-            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+            <Badge
+              variant="outline"
+              className="text-xs bg-green-50 text-green-700 border-green-200"
+            >
               <IconWallet className="h-3 w-3 mr-1" />
               Wallet
             </Badge>

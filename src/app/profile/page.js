@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useWallets } from '@privy-io/react-auth';
 import {
   Card,
   CardContent,
@@ -38,12 +39,370 @@ import {
 import { cn } from '@/lib/utils';
 
 export default function ProfilePage() {
+  const { wallets } = useWallets();
   const [activeTab, setActiveTab] = useState('overview');
+  const [tokenBalances, setTokenBalances] = useState([]);
+  const [historicalTokenData, setHistoricalTokenData] = useState([]);
+  const [tokenMetadata, setTokenMetadata] = useState({});
+  const [tokenImages, setTokenImages] = useState({});
+  const [coingeckoTokens, setCoingeckoTokens] = useState([]);
+  const [loadingTokens, setLoadingTokens] = useState(false);
+  const [loadingHistorical, setLoadingHistorical] = useState(false);
+  const [loadingMetadata, setLoadingMetadata] = useState(false);
+  const [loadingCoingecko, setLoadingCoingecko] = useState(false);
   const [surveyData, setSurveyData] = useState({
     preferredTags: [],
     riskProfile: '',
     usageIntent: '',
   });
+
+  // Get connected wallet address
+  const connectedWallet = wallets.find(
+    (wallet) => wallet.connectorType === 'injected'
+  );
+  const walletAddress = connectedWallet?.address;
+
+  // Fetch Coingecko token list for verification
+  const fetchCoingeckoTokens = async () => {
+    setLoadingCoingecko(true);
+    try {
+      const options = {
+        method: 'GET',
+        headers: {
+          accept: 'application/json',
+          'x-cg-pro-api-key': process.env.NEXT_PUBLIC_COINGECKO_API_KEY,
+        },
+      };
+
+      const response = await fetch(
+        'https://pro-api.coingecko.com/api/v3/coins/list',
+        options
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setCoingeckoTokens(data);
+      } else {
+        console.error('Error fetching Coingecko tokens:', response.status);
+        // Fallback: use free API if pro API fails
+        const fallbackResponse = await fetch(
+          'https://api.coingecko.com/api/v3/coins/list'
+        );
+        if (fallbackResponse.ok) {
+          const fallbackData = await fallbackResponse.json();
+          setCoingeckoTokens(fallbackData);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching Coingecko tokens:', error);
+      // Try fallback free API
+      try {
+        const fallbackResponse = await fetch(
+          'https://api.coingecko.com/api/v3/coins/list'
+        );
+        if (fallbackResponse.ok) {
+          const fallbackData = await fallbackResponse.json();
+          setCoingeckoTokens(fallbackData);
+        }
+      } catch (fallbackError) {
+        console.error('Fallback API also failed:', fallbackError);
+        setCoingeckoTokens([]);
+      }
+    } finally {
+      setLoadingCoingecko(false);
+    }
+  };
+
+  // Check if a token is verified by Coingecko
+  const isTokenVerified = (contractAddress, symbol) => {
+    if (!coingeckoTokens || coingeckoTokens.length === 0) return true; // If no data, show all tokens
+
+    // Handle native MATIC token
+    if (!contractAddress || contractAddress === '0x0000000000000000000000000000000000000000' || symbol?.toLowerCase() === 'matic') {
+      return true; // MATIC is always verified
+    }
+
+    return coingeckoTokens.some((token) => {
+      // Check if the contract address matches any platform
+      if (token.platforms) {
+        const polygonAddress = token.platforms['polygon-pos'];
+        if (
+          polygonAddress &&
+          polygonAddress.toLowerCase() === contractAddress.toLowerCase()
+        ) {
+          return true;
+        }
+      }
+
+      // Also check by symbol as a fallback
+      return (
+        token.symbol && token.symbol.toLowerCase() === symbol.toLowerCase()
+      );
+    });
+  };
+
+  // Fetch token details including image from CoinGecko
+  const fetchTokenDetails = async (contractAddress, symbol) => {
+    try {
+      let tokenId = null;
+
+      // Handle native MATIC token (no contract address)
+      if (!contractAddress || contractAddress === '0x0000000000000000000000000000000000000000' || symbol?.toLowerCase() === 'matic') {
+        tokenId = 'matic-network';
+      } else {
+        // First try to find the token ID from our tokens list
+        const token = coingeckoTokens.find((token) => {
+          // Check by contract address first (most reliable)
+          if (token.platforms && token.platforms['polygon-pos']) {
+            return token.platforms['polygon-pos'].toLowerCase() === contractAddress.toLowerCase();
+          }
+          // Fallback to symbol matching
+          return token.symbol && token.symbol.toLowerCase() === symbol.toLowerCase();
+        });
+
+        if (token && token.id) {
+          tokenId = token.id;
+        } else {
+          // Try common token mappings for Polygon
+          const commonTokens = {
+            'usdc': 'usd-coin',
+            'usdt': 'tether',
+            'weth': 'weth',
+            'wbtc': 'wrapped-bitcoin',
+            'dai': 'dai',
+            'link': 'chainlink',
+            'uni': 'uniswap',
+            'aave': 'aave',
+            'sushi': 'sushi',
+            'crv': 'curve-dao-token',
+            'bal': 'balancer',
+            'comp': 'compound-governance-token'
+          };
+          
+          tokenId = commonTokens[symbol?.toLowerCase()];
+        }
+      }
+
+      if (!tokenId) {
+        return null;
+      }
+
+      const options = {
+        method: 'GET',
+        headers: {
+          accept: 'application/json',
+          'x-cg-pro-api-key': process.env.NEXT_PUBLIC_COINGECKO_API_KEY,
+        },
+      };
+
+      let response = await fetch(
+        `https://pro-api.coingecko.com/api/v3/coins/${tokenId}`,
+        options
+      );
+
+      // If pro API fails, try free API
+      if (!response.ok) {
+        response = await fetch(
+          `https://api.coingecko.com/api/v3/coins/${tokenId}`,
+          { method: 'GET', headers: { accept: 'application/json' } }
+        );
+      }
+
+      if (response.ok) {
+        const data = await response.json();
+        return {
+          id: data.id,
+          symbol: data.symbol,
+          name: data.name,
+          image: data.image,
+          market_cap_rank: data.market_cap_rank,
+          description: data.description?.en,
+        };
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error fetching token details:', error);
+      return null;
+    }
+  };
+
+  // Fetch images for verified tokens
+  const fetchTokenImages = async (tokens) => {
+    const imageMap = {};
+    
+    for (const token of tokens) {
+      const details = await fetchTokenDetails(token.contract, token.symbol);
+      if (details && details.image) {
+        imageMap[token.contract || 'native'] = details.image;
+      }
+    }
+    
+    setTokenImages(imageMap);
+  };
+
+  // Fetch token balances from The Graph Token API (Polygon/Matic)
+  const fetchTokenBalances = async (address) => {
+    if (!address) return;
+
+    setLoadingTokens(true);
+    try {
+      const options = {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_GRAPH_TOKEN_API_KEY}`,
+        },
+      };
+
+      const response = await fetch(
+        `https://token-api.thegraph.com/balances/evm/${address}?network_id=matic&limit=10&page=1`,
+        options
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        const tokens = data.data || [];
+
+        // Filter tokens based on Coingecko verification
+        const verifiedTokens = tokens.filter((token) =>
+          isTokenVerified(token.contract, token.symbol)
+        );
+
+        setTokenBalances(verifiedTokens);
+
+        // Fetch metadata for verified tokens only
+        if (verifiedTokens.length > 0) {
+          fetchAllTokenMetadata(verifiedTokens);
+        }
+      } else {
+        console.error('Error fetching token balances:', response.status);
+        setTokenBalances([]);
+      }
+    } catch (error) {
+      console.error('Error fetching token balances:', error);
+      setTokenBalances([]);
+    } finally {
+      setLoadingTokens(false);
+    }
+  };
+
+  // Fetch historical token data from The Graph Token API (Polygon/Matic)
+  const fetchHistoricalTokenData = async (address) => {
+    if (!address) return;
+
+    setLoadingHistorical(true);
+    try {
+      const options = {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_GRAPH_TOKEN_API_KEY}`,
+        },
+      };
+
+      const response = await fetch(
+        `https://token-api.thegraph.com/historical/balances/evm/${address}?network_id=matic&startTime=0&endTime=9999999999&limit=10&page=1`,
+        options
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        const historicalTokens = data.data || [];
+
+        // Filter historical tokens based on Coingecko verification
+        const verifiedHistoricalTokens = historicalTokens.filter((token) =>
+          isTokenVerified(token.contract, token.symbol)
+        );
+
+        setHistoricalTokenData(verifiedHistoricalTokens);
+
+        // Fetch images for verified historical tokens only
+        if (verifiedHistoricalTokens.length > 0) {
+          await fetchTokenImages(verifiedHistoricalTokens);
+        }
+      } else {
+        console.error('Error fetching historical token data:', response.status);
+        setHistoricalTokenData([]);
+      }
+    } catch (error) {
+      console.error('Error fetching historical token data:', error);
+      setHistoricalTokenData([]);
+    } finally {
+      setLoadingHistorical(false);
+    }
+  };
+
+  // Fetch token metadata from The Graph Token API
+  const fetchTokenMetadata = async (contract, networkId = 'matic') => {
+    try {
+      const options = {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_GRAPH_TOKEN_API_KEY}`,
+        },
+      };
+
+      const response = await fetch(
+        `https://token-api.thegraph.com/tokens/evm/${contract}?network_id=${networkId}`,
+        options
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.data?.[0] || null;
+      } else {
+        console.error('Error fetching token metadata:', response.status);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error fetching token metadata:', error);
+      return null;
+    }
+  };
+
+  // Fetch metadata for all tokens in balance
+  const fetchAllTokenMetadata = async (tokens) => {
+    if (!tokens || tokens.length === 0) return;
+
+    setLoadingMetadata(true);
+    const metadataMap = {};
+
+    try {
+      // Fetch metadata for each unique contract
+      const uniqueContracts = [
+        ...new Set(tokens.map((token) => token.contract)),
+      ];
+
+      const metadataPromises = uniqueContracts.map(async (contract) => {
+        const metadata = await fetchTokenMetadata(contract, 'matic');
+        if (metadata) {
+          metadataMap[contract] = metadata;
+        }
+      });
+
+      await Promise.all(metadataPromises);
+      setTokenMetadata(metadataMap);
+
+      // Fetch token images from CoinGecko
+      await fetchTokenImages(tokens);
+    } catch (error) {
+      console.error('Error fetching all token metadata:', error);
+    } finally {
+      setLoadingMetadata(false);
+    }
+  };
+
+  // Fetch token balances and historical data when wallet address changes
+  useEffect(() => {
+    // First fetch Coingecko tokens for verification
+    fetchCoingeckoTokens();
+  }, []);
+
+  useEffect(() => {
+    if (walletAddress && coingeckoTokens.length > 0) {
+      fetchTokenBalances(walletAddress);
+      fetchHistoricalTokenData(walletAddress);
+    }
+  }, [walletAddress, coingeckoTokens]);
 
   // Available tags for selection
   const availableTags = [
@@ -437,6 +796,339 @@ export default function ProfilePage() {
                         </div>
                       ))}
                     </div>
+                  </CardContent>
+                </Card>
+
+                {/* Token Balances */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <IconWallet className="h-5 w-5 text-purple-500" />
+                      <span>Polygon Token Balances</span>
+                      <img
+                        src="/thegraph.png"
+                        alt="The Graph"
+                        className="h-4 w-4"
+                      />
+                    </CardTitle>
+                    <CardDescription>
+                      Your current token holdings on Polygon network • Powered
+                      by The Graph Token API • Images & Verification by CoinGecko
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {!walletAddress ? (
+                      <div className="text-center py-8">
+                        <IconWallet className="h-12 w-12 text-neutral-400 mx-auto mb-4" />
+                        <p className="text-neutral-600 dark:text-neutral-400">
+                          Connect your wallet to view token balances
+                        </p>
+                      </div>
+                    ) : loadingTokens || loadingMetadata || loadingCoingecko ? (
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto mb-4"></div>
+                        <p className="text-neutral-600 dark:text-neutral-400">
+                          {loadingCoingecko
+                            ? 'Verifying tokens with CoinGecko...'
+                            : loadingTokens
+                            ? 'Loading Polygon token balances...'
+                            : 'Loading token metadata...'}
+                        </p>
+                      </div>
+                    ) : tokenBalances.length === 0 ? (
+                      <div className="text-center py-8">
+                        <IconCoin className="h-12 w-12 text-neutral-400 mx-auto mb-4" />
+                        <p className="text-neutral-600 dark:text-neutral-400">
+                          No verified token balances found on Polygon network
+                        </p>
+                        <p className="text-sm text-neutral-500 dark:text-neutral-500 mt-2">
+                          Only showing tokens verified by CoinGecko to prevent
+                          scam tokens
+                        </p>
+                        <p className="text-sm text-neutral-500 dark:text-neutral-500">
+                          Address: {walletAddress?.slice(0, 6)}...
+                          {walletAddress?.slice(-4)}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {tokenBalances.map((token, index) => {
+                          const metadata = tokenMetadata[token.contract];
+                          const tokenImage = tokenImages[token.contract || 'native'];
+                          return (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-800 rounded-lg"
+                            >
+                              <div className="flex items-center space-x-3">
+                                <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center overflow-hidden">
+                                  {tokenImage?.large ? (
+                                    <img
+                                      src={tokenImage.large}
+                                      alt={token.symbol}
+                                      className="w-12 h-12 rounded-full object-cover"
+                                      onError={(e) => {
+                                        e.target.style.display = 'none';
+                                        e.target.nextSibling.style.display = 'flex';
+                                      }}
+                                    />
+                                  ) : null}
+                                  <span 
+                                    className="text-white font-bold text-sm flex items-center justify-center w-full h-full"
+                                    style={{
+                                      display: tokenImage?.large ? 'none' : 'flex'
+                                    }}
+                                  >
+                                    {token.symbol?.slice(0, 2) || '??'}
+                                  </span>
+                                </div>
+                                <div>
+                                  <h4 className="font-medium text-neutral-900 dark:text-neutral-100 flex items-center space-x-2">
+                                    <span>
+                                      {metadata?.name ||
+                                        token.name ||
+                                        'Unknown Token'}
+                                    </span>
+                                    <div
+                                      className="w-2 h-2 bg-green-500 rounded-full"
+                                      title="Verified by CoinGecko"
+                                    ></div>
+                                  </h4>
+                                  <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                                    {metadata?.symbol || token.symbol} • Polygon
+                                    • Verified
+                                  </p>
+                                  {metadata && (
+                                    <div className="flex items-center space-x-3 text-xs text-neutral-400 mt-1">
+                                      <span>
+                                        Holders:{' '}
+                                        {metadata.holders?.toLocaleString() ||
+                                          'N/A'}
+                                      </span>
+                                      <span>•</span>
+                                      <span>
+                                        Supply:{' '}
+                                        {metadata.total_supply
+                                          ? (
+                                              metadata.total_supply / 1e18
+                                            ).toFixed(0)
+                                          : 'N/A'}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+                                  {parseFloat(token.value).toLocaleString(
+                                    undefined,
+                                    {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 6,
+                                    }
+                                  )}
+                                </div>
+                                <div className="text-sm text-neutral-500 dark:text-neutral-400">
+                                  {metadata?.symbol || token.symbol}
+                                </div>
+                                {metadata?.circulating_supply && (
+                                  <div className="text-xs text-neutral-400">
+                                    {(
+                                      (parseFloat(token.value) /
+                                        metadata.circulating_supply) *
+                                      100
+                                    ).toFixed(6)}
+                                    % of supply
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                        <div className="mt-4 pt-4 border-t border-neutral-200 dark:border-neutral-700">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-neutral-600 dark:text-neutral-400">
+                              Connected Wallet:
+                            </span>
+                            <span className="text-sm font-mono text-neutral-900 dark:text-neutral-100">
+                              {walletAddress?.slice(0, 6)}...
+                              {walletAddress?.slice(-4)}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => {
+                              fetchCoingeckoTokens().then(() => {
+                                fetchTokenBalances(walletAddress);
+                                fetchHistoricalTokenData(walletAddress);
+                              });
+                            }}
+                            className="mt-2 text-sm text-purple-500 hover:text-purple-600 transition-colors"
+                            disabled={
+                              loadingTokens ||
+                              loadingMetadata ||
+                              loadingHistorical ||
+                              loadingCoingecko
+                            }
+                          >
+                            {loadingTokens ||
+                            loadingMetadata ||
+                            loadingHistorical ||
+                            loadingCoingecko
+                              ? 'Refreshing...'
+                              : 'Refresh Data'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Historical Token Data */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <IconHistory className="h-5 w-5 text-blue-500" />
+                      <span>Historical Token Data</span>
+                      <img
+                        src="/thegraph.png"
+                        alt="The Graph"
+                        className="h-4 w-4"
+                      />
+                    </CardTitle>
+                    <CardDescription>
+                      Historical token balance changes on Polygon network •
+                      Powered by The Graph Token API • Images & Verification by CoinGecko
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {!walletAddress ? (
+                      <div className="text-center py-8">
+                        <IconHistory className="h-12 w-12 text-neutral-400 mx-auto mb-4" />
+                        <p className="text-neutral-600 dark:text-neutral-400">
+                          Connect your wallet to view historical data
+                        </p>
+                      </div>
+                    ) : loadingHistorical ? (
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                        <p className="text-neutral-600 dark:text-neutral-400">
+                          Loading historical token data...
+                        </p>
+                      </div>
+                    ) : historicalTokenData.length === 0 ? (
+                      <div className="text-center py-8">
+                        <IconHistory className="h-12 w-12 text-neutral-400 mx-auto mb-4" />
+                        <p className="text-neutral-600 dark:text-neutral-400">
+                          No verified historical token data found
+                        </p>
+                        <p className="text-sm text-neutral-500 dark:text-neutral-500 mt-2">
+                          Only showing tokens verified by CoinGecko to prevent
+                          scam tokens
+                        </p>
+                        <p className="text-sm text-neutral-500 dark:text-neutral-500">
+                          Address: {walletAddress?.slice(0, 6)}...
+                          {walletAddress?.slice(-4)}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {historicalTokenData.map((token, index) => {
+                          const metadata = tokenMetadata[token.contract];
+                          const tokenImage = tokenImages[token.contract || 'native'];
+                          return (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-800 rounded-lg"
+                            >
+                              <div className="flex items-center space-x-3">
+                                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center overflow-hidden">
+                                  {tokenImage?.large ? (
+                                    <img
+                                      src={tokenImage.large}
+                                      alt={token.symbol}
+                                      className="w-12 h-12 rounded-full object-cover"
+                                      onError={(e) => {
+                                        e.target.style.display = 'none';
+                                        e.target.nextSibling.style.display = 'flex';
+                                      }}
+                                    />
+                                  ) : null}
+                                  <span 
+                                    className="text-white font-bold text-sm flex items-center justify-center w-full h-full"
+                                    style={{
+                                      display: tokenImage?.large ? 'none' : 'flex'
+                                    }}
+                                  >
+                                    {token.symbol?.slice(0, 2) || '??'}
+                                  </span>
+                                </div>
+                                <div>
+                                  <h4 className="font-medium text-neutral-900 dark:text-neutral-100 flex items-center space-x-2">
+                                    <span>
+                                      {metadata?.name ||
+                                        token.name ||
+                                        'Unknown Token'}
+                                    </span>
+                                    <div
+                                      className="w-2 h-2 bg-green-500 rounded-full"
+                                      title="Verified by CoinGecko"
+                                    ></div>
+                                  </h4>
+                                  <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                                    {metadata?.symbol || token.symbol} •{' '}
+                                    {new Date(
+                                      token.datetime
+                                    ).toLocaleDateString()}{' '}
+                                    • Verified
+                                  </p>
+                                  {metadata && (
+                                    <div className="text-xs text-neutral-400 mt-1">
+                                      Decimals: {metadata.decimals} • Holders:{' '}
+                                      {metadata.holders?.toLocaleString() ||
+                                        'N/A'}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                  <div>
+                                    <span className="text-neutral-500">
+                                      Open:
+                                    </span>
+                                    <span className="ml-1 font-medium">
+                                      {token.open}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-neutral-500">
+                                      Close:
+                                    </span>
+                                    <span className="ml-1 font-medium">
+                                      {token.close}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-green-500">
+                                      High:
+                                    </span>
+                                    <span className="ml-1 font-medium">
+                                      {token.high}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-red-500">Low:</span>
+                                    <span className="ml-1 font-medium">
+                                      {token.low}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
