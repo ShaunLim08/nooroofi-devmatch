@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -26,13 +26,75 @@ import {
   IconTarget,
   IconFilter,
   IconExternalLink,
+  IconLoader,
+  IconAlertCircle,
 } from '@tabler/icons-react';
+import {
+  fetchDashboardData,
+  fetchPopularMarkets,
+  fetchRecentTrades,
+  formatVolume,
+} from '@/services/MarketData';
 
 export default function Home() {
   const [trendingFilter, setTrendingFilter] = useState('volume');
   const [newFilter, setNewFilter] = useState('duration');
+  const [dashboardData, setDashboardData] = useState(null);
+  const [popularMarkets, setPopularMarkets] = useState([]);
+  const [recentTrades, setRecentTrades] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Mock data for demonstration
+  // Load real market data on component mount
+  useEffect(() => {
+    loadMarketData();
+  }, []);
+
+  const loadMarketData = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const [dashboard, popular, trades] = await Promise.all([
+        fetchDashboardData(),
+        fetchPopularMarkets(10),
+        fetchRecentTrades(20),
+      ]);
+
+      setDashboardData(dashboard);
+      setPopularMarkets(popular);
+      setRecentTrades(trades.allTrades);
+    } catch (err) {
+      console.error('Error loading market data:', err);
+      setError('Failed to load market data. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Filter and sort popular markets based on selection
+  const getFilteredMarkets = () => {
+    if (!popularMarkets.length) return [];
+
+    const filtered = [...popularMarkets];
+
+    switch (trendingFilter) {
+      case 'volume':
+        return filtered.sort(
+          (a, b) =>
+            parseFloat(b.marketData?.volume || 0) -
+            parseFloat(a.marketData?.volume || 0)
+        );
+      case 'activity':
+        return filtered.sort((a, b) => b.activity.count - a.activity.count);
+      case 'change':
+        return filtered.sort((a, b) => Math.random() - 0.5); // Random for demo
+      default:
+        return filtered;
+    }
+  };
+
+  // Mock data for demonstration (fallback)
   const trendingMarkets = [
     {
       title: 'Will Bitcoin reach $100k by 2024?',
@@ -175,107 +237,179 @@ export default function Home() {
                 </div>
               </CardHeader>
               <CardContent className="h-[calc(100%-80px)] overflow-y-auto">
-                <div className="space-y-4">
-                  {trendingMarkets.map((market, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                {isLoading ? (
+                  <div className="flex items-center justify-center h-full">
+                    <IconLoader className="h-8 w-8 animate-spin text-orange-500" />
+                    <span className="ml-2 text-neutral-600">
+                      Loading markets...
+                    </span>
+                  </div>
+                ) : error ? (
+                  <div className="flex items-center justify-center h-full flex-col space-y-2">
+                    <IconAlertCircle className="h-8 w-8 text-red-500" />
+                    <span className="text-red-600 text-center">{error}</span>
+                    <Button
+                      onClick={loadMarketData}
+                      size="sm"
+                      variant="outline"
                     >
-                      <div className="flex-1">
-                        <h3 className="font-medium text-gray-900 dark:text-white mb-1">
-                          {market.title}
-                        </h3>
-                        <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                          <span className="flex items-center">
-                            <IconClock className="h-4 w-4 mr-1" />
-                            {market.created}
-                          </span>
-                          <span className="flex items-center">
-                            <IconVolume className="h-4 w-4 mr-1" />
-                            <img
-                              src="/usdc.png"
-                              alt="USDC"
-                              className="w-3 h-3 mr-1"
-                            />
-                            {market.volume}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="text-right space-y-1">
-                        <div className="text-lg font-semibold">
-                          {market.probability}
-                        </div>
-                        <div
-                          className={`text-sm ${
-                            market.change.startsWith('+')
-                              ? 'text-green-600'
-                              : 'text-red-600'
-                          }`}
-                        >
-                          {market.change}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                      Retry
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {getFilteredMarkets().length > 0
+                      ? getFilteredMarkets().map((market, index) => (
+                          <div
+                            key={market.tokenId || index}
+                            className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                          >
+                            <div className="flex-1">
+                              <h3 className="font-medium text-gray-900 dark:text-white mb-1">
+                                {market.question ||
+                                  market.marketData?.question ||
+                                  'Unknown Market'}
+                              </h3>
+                              <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
+                                <span className="flex items-center">
+                                  <IconUsers className="h-4 w-4 mr-1" />
+                                  {market.activity.count} trades
+                                </span>
+                                <span className="flex items-center">
+                                  <IconVolume className="h-4 w-4 mr-1" />
+                                  <img
+                                    src="/usdc.png"
+                                    alt="USDC"
+                                    className="w-3 h-3 mr-1"
+                                  />
+                                  {formatVolume(
+                                    parseFloat(market.marketData?.volume || 0)
+                                  )}
+                                </span>
+                                <Badge variant="outline" className="text-xs">
+                                  {market.category || 'Unknown'}
+                                </Badge>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-lg font-bold text-orange-500">
+                                {market.probability || 'N/A'}
+                              </div>
+                              <div className="text-sm text-green-500">
+                                {market.change24h}
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      : // Fallback to mock data if no real data available
+                        trendingMarkets.map((market, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                          >
+                            <div className="flex-1">
+                              <h3 className="font-medium text-gray-900 dark:text-white mb-1">
+                                {market.title}
+                              </h3>
+                              <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
+                                <span className="flex items-center">
+                                  <IconClock className="h-4 w-4 mr-1" />
+                                  {market.created}
+                                </span>
+                                <span className="flex items-center">
+                                  <IconVolume className="h-4 w-4 mr-1" />
+                                  <img
+                                    src="/usdc.png"
+                                    alt="USDC"
+                                    className="w-3 h-3 mr-1"
+                                  />
+                                  {market.volume}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-right space-y-1">
+                              <div className="text-lg font-semibold">
+                                {market.probability}
+                              </div>
+                              <div
+                                className={`text-sm ${
+                                  market.change.startsWith('+')
+                                    ? 'text-green-600'
+                                    : 'text-red-600'
+                                }`}
+                              >
+                                {market.change}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
 
-          {/* Top Right - New Markets (Wider) */}
+          {/* Top Right - Recent Trades (Wider) */}
           <div className="lg:col-span-2">
             <Card className="h-[350px]">
               <CardHeader>
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <IconClock className="h-5 w-5 text-orange-500" />
-                    <CardTitle className="text-lg">New Markets</CardTitle>
-                  </div>
-                  <Select value={newFilter} onValueChange={setNewFilter}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="duration">
-                        Filter by Duration
-                      </SelectItem>
-                      <SelectItem value="volume">Filter by Volume</SelectItem>
-                      <SelectItem value="popularity">
-                        Filter by Popularity
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="flex items-center space-x-2">
+                  <IconChartBar className="h-5 w-5 text-orange-500" />
+                  <CardTitle className="text-lg">Recent Trades</CardTitle>
+                  <Badge variant="outline" className="ml-auto">
+                    Live
+                  </Badge>
                 </div>
               </CardHeader>
-              <CardContent className="h-[calc(100%-120px)] overflow-y-auto">
-                <div className="space-y-3">
-                  {newMarkets.map((market, index) => (
-                    <div
-                      key={index}
-                      className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
-                    >
-                      <h4 className="font-medium text-sm mb-2 leading-tight">
-                        {market.title}
-                      </h4>
-                      <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-2">
-                        <span>{market.created}</span>
-                        <span className="flex items-center">
-                          <img
-                            src="/usdc.png"
-                            alt="USDC"
-                            className="w-3 h-3 mr-1"
-                          />
-                          {market.volume}
-                        </span>
+              <CardContent className="h-[calc(100%-80px)] overflow-y-auto">
+                {isLoading ? (
+                  <div className="flex items-center justify-center h-full">
+                    <IconLoader className="h-6 w-6 animate-spin text-orange-500" />
+                    <span className="ml-2 text-sm text-neutral-600">
+                      Loading trades...
+                    </span>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {recentTrades.slice(0, 8).map((trade, index) => (
+                      <div
+                        key={trade.orderHash || index}
+                        className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <Badge
+                            variant="outline"
+                            className={
+                              trade.exchange === 'CTF'
+                                ? 'text-blue-600'
+                                : 'text-purple-600'
+                            }
+                          >
+                            {trade.exchange}
+                          </Badge>
+                          <span className="text-xs text-gray-500">
+                            {trade.formattedTime}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-1">
+                            <img
+                              src="/usdc.png"
+                              alt="USDC"
+                              className="w-3 h-3"
+                            />
+                            <span className="font-medium">
+                              {formatVolume(trade.volume)}
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-500 font-mono">
+                            {trade.maker.slice(0, 6)}...{trade.maker.slice(-4)}
+                          </div>
+                        </div>
                       </div>
-                      <div className="mt-2">
-                        <Badge variant="outline" className="text-xs">
-                          {market.probability}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

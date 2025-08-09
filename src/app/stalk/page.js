@@ -135,6 +135,19 @@ export default function StalkPage() {
   const [searchedUsers, setSearchedUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchError, setSearchError] = useState(null);
+  const [copyTradeModal, setCopyTradeModal] = useState({
+    open: false,
+    user: null,
+  });
+  const [copyTradePositions, setCopyTradePositions] = useState([]);
+
+  // Load copy trade positions from localStorage on component mount
+  useEffect(() => {
+    const savedPositions = localStorage.getItem('copyTradePositions');
+    if (savedPositions) {
+      setCopyTradePositions(JSON.parse(savedPositions));
+    }
+  }, []);
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
@@ -173,6 +186,39 @@ export default function StalkPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // CopyTrade functions
+  const openCopyTradeModal = (user) => {
+    setCopyTradeModal({ open: true, user });
+  };
+
+  const closeCopyTradeModal = () => {
+    setCopyTradeModal({ open: false, user: null });
+  };
+
+  const saveCopyTradePosition = (formData) => {
+    const newPosition = {
+      id: Date.now().toString(),
+      ...formData,
+      walletAddress: copyTradeModal.user.address,
+      traderName:
+        copyTradeModal.user.ensName ||
+        `${copyTradeModal.user.address.slice(
+          0,
+          6
+        )}...${copyTradeModal.user.address.slice(-4)}`,
+      status: 'Active',
+      createdAt: new Date().toISOString(),
+    };
+
+    const updatedPositions = [...copyTradePositions, newPosition];
+    setCopyTradePositions(updatedPositions);
+    localStorage.setItem(
+      'copyTradePositions',
+      JSON.stringify(updatedPositions)
+    );
+    closeCopyTradeModal();
   };
 
   const filteredUsers = searchedUsers.sort((a, b) => {
@@ -229,8 +275,7 @@ export default function StalkPage() {
             className="border-blue-200 text-blue-600 hover:bg-blue-50"
             onClick={(e) => {
               e.stopPropagation();
-              // TODO: Implement copy trade functionality
-              console.log('Copy trade clicked for user:', user.address);
+              openCopyTradeModal(user);
             }}
           >
             <IconTarget className="h-4 w-4 mr-1" />
@@ -377,8 +422,7 @@ export default function StalkPage() {
                   variant="outline"
                   className="border-blue-200 text-blue-600 hover:bg-blue-50"
                   onClick={() => {
-                    // TODO: Implement copy trade functionality
-                    console.log('Copy trade clicked for user:', user.address);
+                    openCopyTradeModal(user);
                   }}
                 >
                   <IconTarget className="h-4 w-4 mr-2" />
@@ -816,6 +860,172 @@ export default function StalkPage() {
     );
   };
 
+  // CopyTrade Modal Component
+  const CopyTradeModal = () => {
+    const [formData, setFormData] = useState({
+      label: '',
+      deposit: '',
+      takeProfit: '',
+      stopLoss: '',
+    });
+
+    const handleInputChange = (e) => {
+      const { name, value } = e.target;
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = (e) => {
+      e.preventDefault();
+      if (
+        formData.label &&
+        formData.deposit &&
+        formData.takeProfit &&
+        formData.stopLoss
+      ) {
+        saveCopyTradePosition(formData);
+        setFormData({ label: '', deposit: '', takeProfit: '', stopLoss: '' });
+      }
+    };
+
+    if (!copyTradeModal.open) return null;
+
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+        onClick={closeCopyTradeModal}
+      >
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.9, opacity: 0 }}
+          className="bg-white dark:bg-neutral-900 rounded-xl shadow-xl max-w-md w-full p-6"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-neutral-900 dark:text-neutral-100">
+              CopyTrade Position
+            </h2>
+            <button
+              onClick={closeCopyTradeModal}
+              className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="mb-4 p-3 bg-neutral-50 dark:bg-neutral-800 rounded-lg">
+            <p className="text-sm text-neutral-600 dark:text-neutral-400">
+              Copying trades from:
+            </p>
+            <p className="font-medium text-neutral-900 dark:text-neutral-100">
+              {copyTradeModal.user?.ensName ||
+                `${copyTradeModal.user?.address.slice(
+                  0,
+                  6
+                )}...${copyTradeModal.user?.address.slice(-4)}`}
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+                Label
+              </label>
+              <input
+                type="text"
+                name="label"
+                value={formData.label}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg 
+                         bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100
+                         focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                placeholder="Enter position label"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+                Deposit (USDC)
+              </label>
+              <input
+                type="number"
+                name="deposit"
+                value={formData.deposit}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg 
+                         bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100
+                         focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                placeholder="0.00"
+                min="0"
+                step="0.01"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+                Take Profit %
+              </label>
+              <input
+                type="number"
+                name="takeProfit"
+                value={formData.takeProfit}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg 
+                         bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100
+                         focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                placeholder="25.0"
+                min="0"
+                step="0.1"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+                Stop Loss %
+              </label>
+              <input
+                type="number"
+                name="stopLoss"
+                value={formData.stopLoss}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg 
+                         bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100
+                         focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                placeholder="10.0"
+                min="0"
+                step="0.1"
+                required
+              />
+            </div>
+
+            <div className="flex space-x-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={closeCopyTradeModal}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1 bg-orange-500 hover:bg-orange-600 text-white"
+              >
+                Create Position
+              </Button>
+            </div>
+          </form>
+        </motion.div>
+      </motion.div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-white dark:from-neutral-900 dark:to-neutral-800 pt-32 pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -926,6 +1136,111 @@ export default function StalkPage() {
 
         {/* User Detail Modal */}
         {selectedUser && <UserDetailModal user={selectedUser} />}
+
+        {/* CopyTrade Modal */}
+        <CopyTradeModal />
+
+        {/* CopyTrade Positions Table */}
+        {copyTradePositions.length > 0 && (
+          <Card className="mt-8">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <IconTarget className="h-5 w-5 text-orange-500" />
+                <span>My CopyTrade Positions</span>
+                <Badge variant="outline" className="ml-2">
+                  {copyTradePositions.length}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-neutral-200 dark:border-neutral-700">
+                      <th className="text-left py-3 px-2 font-medium text-neutral-600 dark:text-neutral-400">
+                        Trader
+                      </th>
+                      <th className="text-left py-3 px-2 font-medium text-neutral-600 dark:text-neutral-400">
+                        Label
+                      </th>
+                      <th className="text-left py-3 px-2 font-medium text-neutral-600 dark:text-neutral-400">
+                        Deposit
+                      </th>
+                      <th className="text-left py-3 px-2 font-medium text-neutral-600 dark:text-neutral-400">
+                        Take Profit
+                      </th>
+                      <th className="text-left py-3 px-2 font-medium text-neutral-600 dark:text-neutral-400">
+                        Stop Loss
+                      </th>
+                      <th className="text-left py-3 px-2 font-medium text-neutral-600 dark:text-neutral-400">
+                        Status
+                      </th>
+                      <th className="text-left py-3 px-2 font-medium text-neutral-600 dark:text-neutral-400">
+                        Created
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {copyTradePositions.map((position) => (
+                      <tr
+                        key={position.id}
+                        className="border-b border-neutral-100 dark:border-neutral-800"
+                      >
+                        <td className="py-3 px-2">
+                          <div>
+                            <p className="font-medium text-neutral-900 dark:text-neutral-100 text-sm">
+                              {position.traderName}
+                            </p>
+                            <p className="text-xs text-neutral-500 font-mono">
+                              {position.walletAddress.slice(0, 6)}...
+                              {position.walletAddress.slice(-4)}
+                            </p>
+                          </div>
+                        </td>
+                        <td className="py-3 px-2">
+                          <span className="text-sm text-neutral-900 dark:text-neutral-100">
+                            {position.label}
+                          </span>
+                        </td>
+                        <td className="py-3 px-2">
+                          <span className="font-medium flex items-center text-sm">
+                            <img
+                              src="/usdc.png"
+                              alt="USDC"
+                              className="w-3 h-3 mr-1"
+                            />
+                            {position.deposit}
+                          </span>
+                        </td>
+                        <td className="py-3 px-2">
+                          <span className="text-sm text-green-600 dark:text-green-400">
+                            +{position.takeProfit}%
+                          </span>
+                        </td>
+                        <td className="py-3 px-2">
+                          <span className="text-sm text-red-600 dark:text-red-400">
+                            -{position.stopLoss}%
+                          </span>
+                        </td>
+                        <td className="py-3 px-2">
+                          <Badge
+                            variant="outline"
+                            className="bg-green-50 text-green-700 border-green-200 text-xs"
+                          >
+                            {position.status}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-2 text-neutral-600 dark:text-neutral-400 text-xs">
+                          {new Date(position.createdAt).toLocaleDateString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
