@@ -1,6 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { formatVolume } from '@/services/MarketData';
+import {
+  fetchUserPositions,
+  calculateUserStats,
+  getUserProfile,
+} from '@/services/userStalkService';
+import {
+  fetchBestNewestMarkets,
+  fetchNewestMarkets,
+  fetchFreshestMarkets,
+  fetchTrendingFromActivity,
+  getTrendingMarketsForUI,
+  calculateProbabilityFromPrices,
+} from '@/services/NewestMarketsFixed';
 import {
   Card,
   CardContent,
@@ -29,12 +43,6 @@ import {
   IconLoader,
   IconAlertCircle,
 } from '@tabler/icons-react';
-import {
-  fetchDashboardData,
-  fetchPopularMarkets,
-  fetchRecentTrades,
-  formatVolume,
-} from '@/services/MarketData';
 
 export default function Home() {
   const [trendingFilter, setTrendingFilter] = useState('volume');
@@ -42,33 +50,247 @@ export default function Home() {
   const [dashboardData, setDashboardData] = useState(null);
   const [popularMarkets, setPopularMarkets] = useState([]);
   const [recentTrades, setRecentTrades] = useState([]);
+  const [trendingMarkets, setTrendingMarkets] = useState([]);
+  const [newestMarkets, setNewestMarkets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // User address for trending markets
+  const USER_ADDRESS = '0x57ea53b3cf624d1030b2d5f62ca93f249adc95ba'; // Change as needed
+
+  async function fetchTrendingMarkets() {
+    try {
+      console.log('Fetching newest markets using The Graph...');
+
+      // Use the new service to get the newest markets directly
+      let sortType = 'volume';
+
+      switch (trendingFilter) {
+        case 'volume':
+          sortType = 'volume';
+          break;
+        case 'activity':
+          sortType = 'activity';
+          break;
+        case 'change':
+          sortType = 'fresh';
+          break;
+        default:
+          sortType = 'volume';
+      }
+
+      const formattedMarkets = await getTrendingMarketsForUI(6, sortType);
+      console.log('Newest markets data:', formattedMarkets);
+
+      setTrendingMarkets(formattedMarkets);
+    } catch (error) {
+      console.error('Error fetching newest markets:', error);
+      // Fallback to mock data if real data fails
+      const mockTrending = [
+        {
+          id: 1,
+          title: 'Loading newest markets...',
+          outcome: 'Pending',
+          probability: 50,
+          volume: '$0',
+          users: 0,
+          change: '+',
+          pnl: '0.0',
+        },
+      ];
+      setTrendingMarkets(mockTrending);
+    }
+  }
+
+  // Helper function moved to NewestMarkets service
+  // function calculateProbabilityFromPrices - now imported
   // Load real market data on component mount
   useEffect(() => {
     loadMarketData();
+    fetchTrendingMarkets();
   }, []);
+
+  // Update trending markets when filter changes
+  useEffect(() => {
+    fetchTrendingMarkets();
+  }, [trendingFilter]);
 
   const loadMarketData = async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const [dashboard, popular, trades] = await Promise.all([
-        fetchDashboardData(),
-        fetchPopularMarkets(10),
-        fetchRecentTrades(20),
-      ]);
+      // Use the consolidated NewestMarkets service with individual fetching
+      const markets = await fetchBestNewestMarkets(20);
 
-      setDashboardData(dashboard);
-      setPopularMarkets(popular);
-      setRecentTrades(trades.allTrades);
+      // Create simple dashboard data from newest markets
+      const dashboardData = {
+        totalMarkets: markets.length,
+        totalVolume: markets.reduce(
+          (sum, m) => sum + parseFloat(m.volume || 0),
+          0
+        ),
+        activeTrades: markets.filter((m) => parseFloat(m.volume || 0) > 1000)
+          .length,
+        averageVolume:
+          markets.length > 0
+            ? markets.reduce((sum, m) => sum + parseFloat(m.volume || 0), 0) /
+              markets.length
+            : 0,
+      };
+
+      // Use markets as both popular markets and recent trades
+      setDashboardData(dashboardData);
+      setPopularMarkets(markets.slice(0, 10));
+      setRecentTrades(
+        markets.map((market) => ({
+          id: market.tokenId,
+          question: market.question,
+          volume: market.volume,
+          timestamp: new Date().toISOString(),
+          maker: `0x${Math.random().toString(16).substr(2, 40)}`, // Generate mock address
+          taker: `0x${Math.random().toString(16).substr(2, 40)}`, // Generate mock address
+          marketData: market,
+        }))
+      );
     } catch (err) {
       console.error('Error loading market data:', err);
       setError('Failed to load market data. Please try again.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Load trending markets based on user trading data
+  const fetchTrendingMarketsData = async () => {
+    try {
+      // Fetch user positions to analyze trending markets
+      const userPositions = await fetchUserPositions();
+
+      // Group positions by market to find trending ones
+      const marketActivity = {};
+
+      userPositions.forEach((position) => {
+        const marketId = position.market;
+        if (!marketActivity[marketId]) {
+          marketActivity[marketId] = {
+            marketId,
+            totalVolume: 0,
+            activeUsers: new Set(),
+            totalPnL: 0,
+            positions: [],
+          };
+        }
+
+        marketActivity[marketId].totalVolume += parseFloat(
+          position.outcomeTokensAmount || 0
+        );
+        marketActivity[marketId].activeUsers.add(position.user);
+        marketActivity[marketId].totalPnL += parseFloat(position.netCost || 0);
+        marketActivity[marketId].positions.push(position);
+      });
+
+      // Convert to array and sort by activity metrics
+      const trendingData = Object.values(marketActivity)
+        .map((market) => ({
+          ...market,
+          activeUsers: market.activeUsers.size,
+          avgPnL: market.totalPnL / market.positions.length,
+          activityScore: market.totalVolume * market.activeUsers.size,
+        }))
+        .sort((a, b) => {
+          switch (trendingFilter) {
+            case 'volume':
+              return b.totalVolume - a.totalVolume;
+            case 'users':
+              return b.activeUsers - a.activeUsers;
+            case 'pnl':
+              return b.avgPnL - a.avgPnL;
+            default:
+              return b.activityScore - a.activityScore;
+          }
+        })
+        .slice(0, 6); // Top 6 trending markets
+
+      // Format for display
+      const formattedTrending = trendingData.map((market) => ({
+        id: market.marketId,
+        title: `Market ${market.marketId.slice(0, 8)}...`,
+        outcome: market.avgPnL > 0 ? 'Yes' : 'No',
+        probability: Math.min(95, Math.max(5, 50 + market.avgPnL * 10)),
+        volume: `$${(market.totalVolume / 1000).toFixed(1)}K`,
+        users: market.activeUsers,
+        change: market.avgPnL > 0 ? '+' : '',
+        pnl: market.avgPnL.toFixed(2),
+      }));
+
+      setTrendingMarkets(formattedTrending);
+    } catch (error) {
+      console.error('Error fetching trending markets:', error);
+      // Fallback to mock data if real data fails
+      const mockTrending = [
+        {
+          id: 1,
+          title: 'Will Bitcoin reach $100k by 2024?',
+          outcome: 'Yes',
+          probability: 76,
+          volume: '$2.3M',
+          users: 1247,
+          change: '+',
+          pnl: '12.5',
+        },
+        {
+          id: 2,
+          title: 'US Elections 2024 Winner',
+          outcome: 'Democratic',
+          probability: 52,
+          volume: '$8.7M',
+          users: 3521,
+          change: '-',
+          pnl: '3.2',
+        },
+        {
+          id: 3,
+          title: 'AI Breakthrough in 2024',
+          outcome: 'Yes',
+          probability: 84,
+          volume: '$1.8M',
+          users: 892,
+          change: '+',
+          pnl: '18.9',
+        },
+        {
+          id: 4,
+          title: 'Tesla Stock Price Target',
+          outcome: 'Above $300',
+          probability: 67,
+          volume: '$4.2M',
+          users: 2156,
+          change: '+',
+          pnl: '7.8',
+        },
+        {
+          id: 5,
+          title: 'Climate Policy Changes',
+          outcome: 'Major Reform',
+          probability: 41,
+          volume: '$3.1M',
+          users: 1834,
+          change: '-',
+          pnl: '2.1',
+        },
+        {
+          id: 6,
+          title: 'Space Mission Success',
+          outcome: 'Success',
+          probability: 89,
+          volume: '$0.9M',
+          users: 456,
+          change: '+',
+          pnl: '15.3',
+        },
+      ];
+      setTrendingMarkets(mockTrending);
     }
   };
 
@@ -94,30 +316,8 @@ export default function Home() {
     }
   };
 
-  // Mock data for demonstration (fallback)
-  const trendingMarkets = [
-    {
-      title: 'Will Bitcoin reach $100k by 2024?',
-      created: '2 days ago',
-      volume: '2.4M',
-      probability: '68%',
-      change: '+5.2%',
-    },
-    {
-      title: 'US Election 2024 Winner',
-      created: '1 week ago',
-      volume: '1.8M',
-      probability: '45%',
-      change: '-2.1%',
-    },
-    {
-      title: 'Tesla Stock Price Above $300',
-      created: '3 days ago',
-      volume: '950K',
-      probability: '72%',
-      change: '+8.7%',
-    },
-  ];
+  // Get trending markets data from state
+  const getTrendingMarkets = () => trendingMarkets;
 
   const newMarkets = [
     {
@@ -227,11 +427,11 @@ export default function Home() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="volume">Filter by Volume</SelectItem>
-                      <SelectItem value="activity">
-                        Filter by Activity
+                      <SelectItem value="volume">
+                        Best Newest Markets
                       </SelectItem>
-                      <SelectItem value="change">Filter by Change</SelectItem>
+                      <SelectItem value="activity">Recent Activity</SelectItem>
+                      <SelectItem value="change">Freshest Markets</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -258,91 +458,60 @@ export default function Home() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {getFilteredMarkets().length > 0
-                      ? getFilteredMarkets().map((market, index) => (
-                          <div
-                            key={market.tokenId || index}
-                            className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                          >
-                            <div className="flex-1">
-                              <h3 className="font-medium text-gray-900 dark:text-white mb-1">
-                                {market.question ||
-                                  market.marketData?.question ||
-                                  'Unknown Market'}
-                              </h3>
-                              <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                                <span className="flex items-center">
-                                  <IconUsers className="h-4 w-4 mr-1" />
-                                  {market.activity.count} trades
-                                </span>
-                                <span className="flex items-center">
-                                  <IconVolume className="h-4 w-4 mr-1" />
-                                  <img
-                                    src="/usdc.png"
-                                    alt="USDC"
-                                    className="w-3 h-3 mr-1"
-                                  />
-                                  {formatVolume(
-                                    parseFloat(market.marketData?.volume || 0)
-                                  )}
-                                </span>
-                                <Badge variant="outline" className="text-xs">
-                                  {market.category || 'Unknown'}
-                                </Badge>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-lg font-bold text-orange-500">
-                                {market.probability || 'N/A'}
-                              </div>
-                              <div className="text-sm text-green-500">
-                                {market.change24h}
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      : // Fallback to mock data if no real data available
-                        trendingMarkets.map((market, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
-                          >
-                            <div className="flex-1">
-                              <h3 className="font-medium text-gray-900 dark:text-white mb-1">
-                                {market.title}
-                              </h3>
-                              <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                                <span className="flex items-center">
-                                  <IconClock className="h-4 w-4 mr-1" />
-                                  {market.created}
-                                </span>
-                                <span className="flex items-center">
-                                  <IconVolume className="h-4 w-4 mr-1" />
-                                  <img
-                                    src="/usdc.png"
-                                    alt="USDC"
-                                    className="w-3 h-3 mr-1"
-                                  />
-                                  {market.volume}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="text-right space-y-1">
-                              <div className="text-lg font-semibold">
-                                {market.probability}
-                              </div>
-                              <div
-                                className={`text-sm ${
-                                  market.change.startsWith('+')
-                                    ? 'text-green-600'
-                                    : 'text-red-600'
-                                }`}
+                    {/* Always show newest markets from our new service */}
+                    {getTrendingMarkets().map((market, index) => (
+                      <div
+                        key={market.id || market.tokenId || index}
+                        className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <div className="flex-1">
+                          <h3 className="font-medium text-gray-900 dark:text-white mb-1">
+                            {market.title}
+                          </h3>
+                          <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
+                            <span className="flex items-center">
+                              <IconUsers className="h-4 w-4 mr-1" />
+                              {market.users} activity
+                            </span>
+                            <span className="flex items-center">
+                              <IconVolume className="h-4 w-4 mr-1" />
+                              <img
+                                src="/usdc.png"
+                                alt="USDC"
+                                className="w-3 h-3 mr-1"
+                              />
+                              {market.volume}
+                            </span>
+                            <Badge variant="outline" className="text-xs">
+                              {market.category}
+                            </Badge>
+                            {market.source && (
+                              <Badge
+                                variant="outline"
+                                className="text-xs bg-orange-50 text-orange-600"
                               >
-                                {market.change}
-                              </div>
-                            </div>
+                                {market.source}
+                              </Badge>
+                            )}
                           </div>
-                        ))}
+                        </div>
+                        <div className="text-right">
+                          <div className="text-lg font-bold text-orange-500">
+                            {market.probability}%
+                          </div>
+                          <div className="text-sm text-green-500">
+                            New Market
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    {getTrendingMarkets().length === 0 && (
+                      <div className="text-center py-8 text-gray-500">
+                        <IconLoader className="h-8 w-8 animate-spin mx-auto mb-2" />
+                        <p>Loading newest markets...</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -377,16 +546,6 @@ export default function Home() {
                         className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm"
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <Badge
-                            variant="outline"
-                            className={
-                              trade.exchange === 'CTF'
-                                ? 'text-blue-600'
-                                : 'text-purple-600'
-                            }
-                          >
-                            {trade.exchange}
-                          </Badge>
                           <span className="text-xs text-gray-500">
                             {trade.formattedTime}
                           </span>
@@ -403,7 +562,12 @@ export default function Home() {
                             </span>
                           </div>
                           <div className="text-xs text-gray-500 font-mono">
-                            {trade.maker.slice(0, 6)}...{trade.maker.slice(-4)}
+                            {trade.maker
+                              ? `${trade.maker.slice(
+                                  0,
+                                  6
+                                )}...${trade.maker.slice(-4)}`
+                              : 'Unknown'}
                           </div>
                         </div>
                       </div>
